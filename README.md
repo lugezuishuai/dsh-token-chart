@@ -4,10 +4,6 @@
 
 ![dsh](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.0--rc.2-1c3c3c.svg)
 ![node](https://img.shields.io/badge/node-%E2%89%A5%2020-339933.svg)
-![language](https://img.shields.io/badge/language-TypeScript-3178c6.svg)
-![ui](https://img.shields.io/badge/UI-React%2018-61dafb.svg)
-![charts](https://img.shields.io/badge/charts-ECharts%206.1-aa344d.svg)
-![deps](https://img.shields.io/badge/runtime%20deps-0-44bb00.svg)
 ![license](https://img.shields.io/badge/license-MIT-007ec6.svg)
 
 ## 🚀 快速开始
@@ -189,7 +185,7 @@ npm publish              # publishConfig 固定发往 registry.npmjs.org
 发布流水线要点：
 
 1. **`prepack` = 全量构建 + `scripts/preflight.mjs`**，因此 tarball 一定带着四件产物与 `lib/types`；产物不进 git，`files` 白名单决定包内容。
-2. **安装与发布走不同 registry**：项目 `.npmrc` 把**安装**指向 `registry.npmmirror.com`（国内镜像），**发布**由 `package.json#publishConfig.registry` 固定在 `https://registry.npmjs.org/`——npmmirror 是只读镜像，不接受发布。
+2. **安装与发布都走 npmjs 源站**：项目 `.npmrc` 与 `package.json#publishConfig.registry` 都指向 `https://registry.npmjs.org/`——镜像是只读的、不接受发布，统一在源站可以让"消费者装到的版本"与"发布出去的版本"始终一致。
 3. **preflight 检查**：包名与 loader id 一致（改名事故的护栏）、四件产物存在、`cordis.patch.yml` 按包名插入、`private` 已移除、`engines.dsh` 已声明、lockfile 不含内网/私有 registry。
 
 三种分发方式的产物来源：

@@ -48,7 +48,7 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 8. **改动客户端产物「路径」需要重启 DSH 一次**（client-modules 的包元数据缓存到重启）；只改内容不用重启，硬刷新即可。
 9. **提交前跑 `npm run check`**（typecheck + build + preflight + 宿主用例）。不要提交 `lib/`、`*.tgz`、`node_modules/`。
 10. **版本号必须与 git tag 一致**：插件内建更新检查按版本号比较，tag 与 `package.json` 漂移会让用户端的「有新版本」判断出错。
-11. **发布的 registry 固定为 npmjs**（`package.json#publishConfig.registry`）。项目 `.npmrc` 指向 `registry.npmmirror.com` 只影响**安装**——npmmirror 是只读镜像，不接受发布。
+11. **安装与发布都走 npmjs 源站**：项目 `.npmrc` 与 `package.json#publishConfig.registry` 都是 `https://registry.npmjs.org/`。镜像是只读的、不接受发布；不要为了"装得快"把项目 `.npmrc` 改回镜像——那会让本地装到的版本与发出去的版本出现时间差。
 
 ---
 
@@ -181,7 +181,7 @@ dsh-token-chart/
 ├── tsconfig.json              Host 工程（src → lib，排除 src/client）
 ├── tsconfig.client.json       浏览器工程（仅类型检查，noEmit）
 ├── vitest.config.ts           两个 project：host / client，串行执行
-├── .npmrc                     安装走 npmmirror（发布由 publishConfig 固定到 npmjs）
+├── .npmrc                     安装与发布都指向 registry.npmjs.org
 ├── .gitignore                 node_modules / lib / *.tmp / *.log / *.tgz
 ├── AGENTS.md  README.md  LICENSE  icon.svg
 ```

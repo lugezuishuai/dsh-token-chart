@@ -80,9 +80,10 @@ if (!patch.includes(`name: '${pkg.name}'`)) {
 // then fails in the consumer's install: a full tarball URL is not a registry
 // name they can re-resolve. Nothing about running `npm install` behind such a
 // registry makes this visible locally, so the guard belongs next to the package.
-// The public mirrors are tolerated (`registry.npmmirror.com`: this project's
-// .npmrc points installs there, and npm rewrites the host anyway); anything
-// else — an internal registry, a corporate proxy — is a leak.
+// The public mirrors are tolerated (`registry.npmmirror.com`: a contributor may
+// regenerate the lockfile behind a mirror); anything else — an internal
+// registry, a corporate proxy — is a leak. This project's own .npmrc points at
+// the npmjs origin.
 const ALLOWED_LOCK_HOSTS = new Set(['https://registry.npmjs.org', 'https://registry.npmmirror.com'])
 if (existsSync('package-lock.json')) {
   const lock = readFileSync('package-lock.json', 'utf8')
