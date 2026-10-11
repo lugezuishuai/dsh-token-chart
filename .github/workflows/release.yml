@@ -1,0 +1,126 @@
+name: release
+
+# 发布流水线：package.json 的版本号是唯一真源。
+#
+#   · 推送到 main（含 PR 合并产生的 merge commit）→ 跑门禁；若该版本还不在 npm 上，
+#     就发布到 npm、打 git tag、建 GitHub Release
+#   · 手动触发（workflow_dispatch）→ 可先递增版本，再走同一条路径
+#
+# 版本已存在于 npm 时只跑门禁并跳过发布，所以日常推送到 main 不会失败。
+# 预发布版本永远不会移动 latest：dist-tag 自动取 preid（0.1.1-rc.1 → rc）。
+#
+# 前置：仓库 secret 里放一个 npm granular access token（勾选 Bypass 2FA、
+# 仅授权本包 Read and write），名为 NPM_TOKEN。没有它时门禁照跑，发布与打 tag 跳过。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 发布前递增版本；none = 直接用 package.json 里的版本
+        type: choice
+        default: none
+        options: [none, prerelease, prepatch, patch, preminor, minor, premajor, major]
+      preid:
+        description: 预发布标识（prerelease / prepatch / preminor / premajor 时生效）
+        type: string
+        default: rc
+      dist_tag:
+        description: 手动指定 npm dist-tag；留空 = 正式版 latest、预发布版取 preid
+        type: string
+        default: ''
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # 版本递增会把提交推回 main，这里挡掉自我触发（提交信息里也带 [skip ci] 双保险）
+    if: github.actor != 'github-actions[bot]'
+    env:
+      PACKAGE: dsh-token-chart
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci --no-audit --no-fund
+
+      - name: 门禁（typecheck + build + preflight + 宿主用例）
+        run: npm run check
+
+      - name: 递增版本（仅手动触发且 bump != none）
+        if: inputs.bump != '' && inputs.bump != 'none'
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          npm version '${{ inputs.bump }}' --preid '${{ inputs.preid }}' -m 'chore(release): %s [skip ci]'
+          git push origin HEAD:main
+
+      - name: 解析版本与 dist-tag
+        id: meta
+        run: |
+          V="$(node -p "require('./package.json').version")"
+          TAG='${{ inputs.dist_tag }}'
+          if printf '%s' "$V" | grep -q -- '-'; then
+            # 预发布：dist-tag 取 preid，latest 永远留给正式版
+            PRE="${V#*-}"; PRE="${PRE%%.*}"
+            [ -z "$TAG" ] && TAG="$PRE"
+          else
+            [ -z "$TAG" ] && TAG=latest
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "版本 $V → dist-tag $TAG"
+
+      - name: 检查 npm 凭据
+        id: creds
+        run: |
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            echo 'ok=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ok=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 发布到 npm
+        id: publish
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          V='${{ steps.meta.outputs.version }}'
+          if npm view "$PACKAGE@$V" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "::notice::$PACKAGE@$V 已存在于 npm，跳过发布"
+          else
+            npm publish --tag '${{ steps.meta.outputs.dist_tag }}'
+          fi
+          echo 'done=true' >> "$GITHUB_OUTPUT"
+
+      - name: 未配置 NPM_TOKEN（跳过发布）
+        if: steps.creds.outputs.ok != 'true'
+        run: echo "::warning::仓库未配置 NPM_TOKEN secret，已跳过发布与打 tag；门禁仍然执行。"
+
+      - name: 打 tag 并建 Release
+        if: steps.publish.outputs.done == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          V='${{ steps.meta.outputs.version }}'
+          git tag -a "v$V" -m "v$V" 2>/dev/null || echo "tag v$V 已存在"
+          git push origin "v$V" 2>/dev/null || echo "tag v$V 已存在或无需推送"
+          gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --title "v$V" --generate-notes
