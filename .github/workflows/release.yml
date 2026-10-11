@@ -9,8 +9,10 @@ name: release
 # 版本已存在于 npm 时只跑门禁并跳过发布，所以日常推送到 main 不会失败。
 # 预发布版本永远不会移动 latest：dist-tag 自动取 preid（0.1.1-rc.1 → rc）。
 #
-# 前置：仓库 secret 里放一个 npm granular access token（勾选 Bypass 2FA、
-# 仅授权本包 Read and write），名为 NPM_TOKEN。没有它时门禁照跑，发布与打 tag 跳过。
+# 认证：npm Trusted Publishing（OIDC），仓库里不存任何 npm token。
+#   一次性前置（在 npmjs 上做）：本包 → Settings → Trusted Publisher →
+#   GitHub Actions，填 owner `lugezuishuai`、repo `dsh-token-chart`、
+#   workflow filename `release.yml`。npm CLI 需 ≥ 11.5.1，故下面显式升级 npm。
 
 on:
   push:
@@ -36,7 +38,8 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: write # 打 tag / 建 Release / 把版本提交推回 main
+  id-token: write # npm trusted publishing（OIDC）必需
 
 jobs:
   release:
@@ -45,18 +48,32 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     env:
       PACKAGE: dsh-token-chart
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # 不传 registry-url：它会写出 `_authToken=${NODE_AUTH_TOKEN}` 占位行，
+      # 而本项目 .npmrc 已把 registry 固定到 npmjs，认证交给 OIDC 更干净。
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
           cache: npm
+
+      - name: 升级 npm（trusted publishing 需要 ≥ 11.5.1）
+        run: npm install -g npm@latest
+
+      - name: 环境自检
+        run: |
+          echo "npm      : $(npm --version)"
+          echo "node     : $(node --version)"
+          echo "registry : $(npm config get registry)"
+          if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]; then
+            echo "OIDC     : available"
+          else
+            echo "OIDC     : MISSING（trusted publishing 会失败）"
+          fi
 
       - name: 安装依赖
         run: npm ci --no-audit --no-fund
@@ -88,39 +105,23 @@ jobs:
           echo "dist_tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "版本 $V → dist-tag $TAG"
 
-      - name: 检查 npm 凭据
-        id: creds
-        run: |
-          if [ -n "${NPM_TOKEN:-}" ]; then
-            echo 'ok=true' >> "$GITHUB_OUTPUT"
-          else
-            echo 'ok=false' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: 发布到 npm
+      - name: 发布到 npm（OIDC，不需要任何 secret）
         id: publish
-        if: steps.creds.outputs.ok == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           V='${{ steps.meta.outputs.version }}'
           if npm view "$PACKAGE@$V" version --registry https://registry.npmjs.org >/dev/null 2>&1; then
             echo "::notice::$PACKAGE@$V 已存在于 npm，跳过发布"
           else
-            npm publish --tag '${{ steps.meta.outputs.dist_tag }}'
+            npm publish --tag '${{ steps.meta.outputs.dist_tag }}' --provenance
           fi
-          echo 'done=true' >> "$GITHUB_OUTPUT"
-
-      - name: 未配置 NPM_TOKEN（跳过发布）
-        if: steps.creds.outputs.ok != 'true'
-        run: echo "::warning::仓库未配置 NPM_TOKEN secret，已跳过发布与打 tag；门禁仍然执行。"
 
       - name: 打 tag 并建 Release
-        if: steps.publish.outputs.done == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           V='${{ steps.meta.outputs.version }}'
           git tag -a "v$V" -m "v$V" 2>/dev/null || echo "tag v$V 已存在"
           git push origin "v$V" 2>/dev/null || echo "tag v$V 已存在或无需推送"
-          gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --title "v$V" --generate-notes
+          # 预发布版本在 GitHub 上标记为 pre-release，避免被当成正式版
+          if printf '%s' "$V" | grep -q -- '-'; then PRE='--prerelease'; else PRE=''; fi
+          gh release view "v$V" >/dev/null 2>&1 || gh release create "v$V" --title "v$V" $PRE --generate-notes

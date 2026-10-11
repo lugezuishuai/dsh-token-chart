@@ -182,6 +182,8 @@ npm version patch        # 版本号即 tag，更新检查按版本号比较，�
 npm publish              # publishConfig 固定发往 registry.npmjs.org
 ```
 
+发布也可以交给 CI：[.github/workflows/release.yml](.github/workflows/release.yml) 在**推送到 main**（含 PR 合并）与**手动触发**时运行——跑门禁 → 版本还不在 npm 上就自动发布、打 `v<version>` tag、建 GitHub Release；版本已存在则只跑门禁。认证走 **npm Trusted Publishing（OIDC）**，仓库里不存任何 npm token；预发布版本按 preid 走独立 dist-tag（`0.1.1-rc.1` → `rc`），不会顶掉 `latest`。
+
 发布流水线要点：
 
 1. **`prepack` = 全量构建 + `scripts/preflight.mjs`**，因此 tarball 一定带着四件产物与 `lib/types`；产物不进 git，`files` 白名单决定包内容。

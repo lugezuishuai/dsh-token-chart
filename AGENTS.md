@@ -138,6 +138,8 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 
 发布前：`npm run check` → `npm pack` 核对内容 → `npm publish`。**已发布的版本收不回**，`prepack` 里的 preflight 是唯一的自动保险。
 
+**CI 发布**：`.github/workflows/release.yml` 在**推送到 main**（含 PR 合并）与**手动触发**时运行 —— 跑门禁 → 该版本不在 npm 上就发布 → 打 `v<version>` tag → 建 GitHub Release；版本已存在则只跑门禁（日常推送不会红）。认证走 **npm Trusted Publishing（OIDC）**，仓库与 secret 里都不存 npm token；手动触发可带 `bump=prepatch|patch|…` 让 CI 自己递增版本（提交带 `[skip ci]`，job 有 bot 守卫，不会循环）。一次性前置：npmjs 上把本包绑定到本仓库的 `release.yml`（Trusted Publisher）。预发布版本按 preid 走独立 dist-tag（`0.1.1-rc.1` → `rc`），**永不移动 `latest`**。
+
 ---
 
 ## 7. preflight 检查什么
@@ -182,6 +184,7 @@ dsh-token-chart/
 ├── tsconfig.client.json       浏览器工程（仅类型检查，noEmit）
 ├── vitest.config.ts           两个 project：host / client，串行执行
 ├── .npmrc                     安装与发布都指向 registry.npmjs.org
+├── .github/workflows/release.yml  CI：门禁 → npm 发布（OIDC）→ tag + Release
 ├── .gitignore                 node_modules / lib / *.tmp / *.log / *.tgz
 ├── AGENTS.md  README.md  LICENSE  icon.svg
 ```
