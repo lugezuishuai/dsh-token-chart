@@ -1,5 +1,5 @@
 /**
- * Bundle the browser half into `client/client.js`.
+ * Bundle the browser half into `lib/client.js`.
  *
  * The artifact is a CJS closure factory — the DSH client-module contract:
  *
@@ -10,15 +10,15 @@
  * React and the other platform seeds stay external and resolve through the
  * `require` the loader injects (its module table), so the bundle never ships
  * its own React copy. The output is deliberately not minified: the artifact is
- * committed, auditable line by line, and small enough that minification would
- * only cost readability.
+ * auditable line by line, and small enough that minification would only cost
+ * readability.
  */
 import { build } from 'esbuild'
 import { readFile, writeFile } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import { PACKAGE_ID, banner, footer, report } from './client-contract.mjs'
 
-const OUT = 'client/client.js'
+const OUT = 'lib/client.js'
 
 const result = await build({
   entryPoints: ['src/client/index.tsx'],

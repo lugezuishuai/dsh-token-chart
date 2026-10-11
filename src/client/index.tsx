@@ -5,7 +5,7 @@
  * right-sidebar drawer, the session-header action), intercepts the product's
  * own usage pill, and keeps the preference store warm for every seat.
  *
- * Built by scripts/build-client.mjs into client/client.js as a
+ * Built by scripts/build-client.mjs into lib/client.js as a
  * `window.__ModuleLoader__` factory — the DSH client-module contract, the same
  * shape the shipped plugins use.
  *

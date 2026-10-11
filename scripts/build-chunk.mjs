@@ -1,5 +1,5 @@
 /**
- * Build the package-local ECharts chunk that `src/client/mount.ts` loads with
+ * Build the package-local ECharts chunk that `src/client/mount.tsx` loads with
  * `require.async('./client.echarts.js')`.
  *
  * The chunk self-registers under the entry id with a `chunk` file name, which
@@ -12,7 +12,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import { PACKAGE_ID, report } from './client-contract.mjs'
 
-const OUT = 'client/client.echarts.js'
+const OUT = 'lib/client.echarts.js'
 await mkdir('node_modules/.cache', { recursive: true })
 
 const result = await build({

@@ -1,29 +1,28 @@
 {
   "name": "dsh-token-chart",
   "version": "0.1.0",
-  "private": true,
+  "description": "Token usage statistics and chart visualization for DeepSeek Harness: per-session drawer, today / last 3 / last 7 days panel, and chart configuration.",
   "type": "module",
   "main": "lib/index.js",
-  "description": "Token usage statistics and chart visualization for DeepSeek Harness: per-session drawer, today / last 3 / last 7 days panel, and chart configuration.",
-  "icon": "./icon.svg",
+  "types": "lib/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
-    "./client": "./client/client.js",
+    "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "lib",
-    "client",
     "src",
     "cordis.patch.yml",
     "icon.svg",
     "locale",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "dsh": {
     "manifestVersion": 1,
@@ -46,23 +45,54 @@
     "title": "Token 用量图表",
     "description": "统计并可视化 Token 用量：会话抽屉、今天 / 近 3 天 / 近 7 天面板与图表配置。"
   },
+  "icon": "./icon.svg",
   "engines": {
-    "node": ">=20"
+    "node": ">=20",
+    "dsh": ">=0.2.0-rc.2"
+  },
+  "author": "dsh-external",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsh-external/dsh-token-chart.git"
+  },
+  "homepage": "https://github.com/dsh-external/dsh-token-chart#readme",
+  "bugs": {
+    "url": "https://github.com/dsh-external/dsh-token-chart/issues"
+  },
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "token",
+    "usage",
+    "dashboard",
+    "echarts"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
-    "build": "npm run build:host && npm run build:styles && npm run build:client && npm run build:chunk",
+    "clean": "node -e \"require('node:fs').rmSync('lib',{recursive:true,force:true})\"",
+    "build": "npm run clean && npm run build:host && npm run build:styles && npm run build:client && npm run build:chunk",
     "build:host": "tsc -p tsconfig.json",
+    "build:styles": "node scripts/build-styles.mjs",
     "build:client": "node scripts/build-client.mjs",
     "build:chunk": "node scripts/build-chunk.mjs",
+    "prepare": "npm run build",
+    "prepack": "npm run build && node scripts/preflight.mjs",
+    "prepublishOnly": "node scripts/preflight.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "check": "npm run typecheck && npm run build && node scripts/preflight.mjs && npm run test:host",
     "test": "vitest run",
     "test:host": "vitest run --project host",
     "test:client": "vitest run --project client",
-    "format": "prettier --write 'src/**/*.{ts,tsx}' 'test/**/*.mjs' 'scripts/**/*.mjs'",
     "test:watch": "vitest",
-    "build:styles": "node scripts/build-styles.mjs"
+    "format": "prettier --write 'src/**/*.{ts,tsx}' 'tests/**/*.mjs' 'scripts/**/*.mjs'"
   },
-  "license": "MIT",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
     "@types/node": "^26.6.4",
@@ -78,6 +108,5 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
-  },
-  "types": "lib/types/index.d.ts"
+  }
 }

@@ -1,6 +1,6 @@
 /**
  * Compile the plugin stylesheet: Tailwind (utilities) + Less (components) into
- * one real CSS artifact at `client/token-chart.css`.
+ * one real CSS artifact at `lib/token-chart.css`.
  *
  * The artifact is served by the Host half and linked by the browser half, so the
  * client bundle carries no CSS text of its own.
@@ -12,11 +12,11 @@ import { gzipSync } from 'node:zlib'
 import { join } from 'node:path'
 
 const run = promisify(execFile)
-const OUT = 'client/token-chart.css'
+const OUT = 'lib/token-chart.css'
 const CACHE = 'node_modules/.cache/dtc-styles'
 
 await mkdir(CACHE, { recursive: true })
-await mkdir('client', { recursive: true })
+await mkdir('lib', { recursive: true })
 
 const bin = (name) => join('node_modules', '.bin', name)
 

@@ -1,6 +1,6 @@
 {
   // Typecheck-only project for the browser half (src/client), which esbuild
-  // bundles into client/client.js as a window.__ModuleLoader__ factory.
+  // bundles into lib/client.js as a window.__ModuleLoader__ factory.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],

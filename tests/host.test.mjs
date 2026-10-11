@@ -405,12 +405,12 @@ it('folds usage, persists it and serves the API', async () => {
       sources.filter((file) => escape.test(readFileSync(file, 'utf8'))).join(','),
       '',
     )
-    const bundle = readFileSync(new URL('../client/client.js', import.meta.url), 'utf8')
+    const bundle = readFileSync(new URL('../lib/client.js', import.meta.url), 'utf8')
     check('client bundle carries no unicode escapes', (bundle.match(escape) ?? []).length, 0)
     check('client bundle shows chinese literally', bundle.includes('缓存读取'), true)
-    const css = readFileSync(new URL('../client/token-chart.css', import.meta.url), 'utf8')
+    const css = readFileSync(new URL('../lib/token-chart.css', import.meta.url), 'utf8')
     check('stylesheet carries no unicode escapes', (css.match(escape) ?? []).length, 0)
-    const chunk = readFileSync(new URL('../client/client.echarts.js', import.meta.url), 'utf8')
+    const chunk = readFileSync(new URL('../lib/client.echarts.js', import.meta.url), 'utf8')
     check('chunk carries no chinese escapes', (chunk.match(cjkEscape) ?? []).length, 0)
   }
 

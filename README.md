@@ -2,6 +2,8 @@
 
 DeepSeek Harness 插件：统计并以图表方式可视化 Token 用量。
 
+兼容 DSH `>=0.2.0-rc.2` · MIT License · 作者 dsh-external · 运行时零依赖（不需要 `dependencies`，也不需要 peer 授权）
+
 ## 功能
 
 | 场景     | 入口                                            | 内容                                                                                                            |
@@ -30,19 +32,28 @@ x 轴标签按视图区分：**每日面板的「今天」用时间 `HH:mm`**（
 
 ## 结构
 
+源码在 `src/`，**所有构建产物落在 `lib/`**；`lib/` 不入 git（见 `.gitignore`），由安装通道现场构建或由发布流程预构建：
+
 ```
 dsh-token-chart/
-├── package.json         # dsh.bundle.patch + dsh.client（web）
+├── package.json         # dsh.bundle.patch + dsh.client（web）+ engines.dsh
 ├── cordis.patch.yml     # 插入 token-chart 这一 Host 行
-├── index.js             # Host 半边：用量折叠、7 天存储、/token-chart/api
-├── client.js            # 浏览器半边：插槽注册、ECharts 挂载、设置页
-├── client.echarts.js    # 包内懒加载 chunk（ECharts 6.1.0，构建产物，已随包发布）
-├── chunk/
-│   ├── echarts.entry.js # 构建入口：core + bar/line/pie + grid/tooltip/legend + SVG 渲染器
-│   └── build.mjs        # esbuild 打包 + __ModuleLoader__ 自注册包装 + 产物断言
-├── icon.svg
-├── locale/{zh,en}.json
-└── test/{host,client}.test.mjs
+├── src/                 源码（唯一事实来源）
+│   ├── index.ts         Host 半边入口：用量折叠、7 天存储、/token-chart/api
+│   ├── store.ts         buckets.ts  prefs.ts  paths.ts  constants.ts  types.ts  update.ts
+│   ├── chunk/           echarts.entry.ts —— ECharts chunk 入口（tree-shaken）
+│   └── client/          浏览器半边源码（TSX + JSX）
+│       └── styles/      Tailwind + Less 源文件
+├── lib/                 构建产物（npm run build 生成，git 忽略）
+│   ├── index.js         Host 半边（tsc）
+│   ├── client.js        浏览器半边：__ModuleLoader__ CJS 工厂（esbuild，未压缩）
+│   ├── client.echarts.js 包内懒加载 chunk（ECharts 6.1.0，压缩）
+│   ├── token-chart.css  Tailwind + Less 编译出的样式表，由宿主路由下发
+│   └── types/*.d.ts     类型声明（tsc）
+├── scripts/             build-client / build-chunk / build-styles / client-contract / preflight
+├── tests/               vitest：host / client / client-degraded + support/ 夹具
+├── locale/{zh,en}.json  插件管理器里的标题与描述
+└── LICENSE  README.md  icon.svg
 ```
 
 ## 为什么 ECharts 必须打包（而不是 dependencies）
@@ -52,10 +63,10 @@ dsh-token-chart/
 - 浏览器半边运行在页面里，`require` 只能解析加载器模块表里的平台种子（`react`、`react/jsx-runtime`、`react-dom`、`react-dom/client`、`@deepseek-ai/cordis`、几个 `dsh-client-*`）。写 `dependencies` 也一样：Node 侧的 `node_modules` 到不了页面。
 - 所以 ECharts 的代码必须在构建时**打进产物**。两种形态：
 
-| 形态               | 产物                                                 | 代价                                           |
-| ------------------ | ---------------------------------------------------- | ---------------------------------------------- |
-| 包内 chunk（当前） | `client/client.echarts.js`，`require.async` 按需加载 | 首次出图多一次 234 KB(gz) 请求；启动路径 22 KB |
-| 内联进 client.js   | 单文件 ~700 KB 原始 / 257 KB(gz)                     | 每次打开页面都要下整包，哪怕从不看图           |
+| 形态               | 产物                                                  | 代价                                           |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------------- |
+| 包内 chunk（当前） | `lib/client.echarts.js`，`require.async` 按需加载     | 首次出图多一次 234 KB(gz) 请求；启动路径 20 KB |
+| 内联进 client.js   | 单文件 ~700 KB 原始 / 257 KB(gz)                      | 每次打开页面都要下整包，哪怕从不看图           |
 
 参考实现：dsh-market 同样把它的构建期依赖 `marked` 直接打进 `client/client.js`，运行时 `dependencies` 只留宿主侧用的包（`js-yaml`、`undici`）。
 
@@ -65,10 +76,10 @@ dsh-token-chart/
 
 - 浏览器半边用 `require.async('./client.echarts.js')` 请求；客户端模块系统按
   `/plugins/dsh-token-chart/client.echarts.js?rev=<client.js 的 rev>` 取文件（gzip + immutable 缓存），
-  首次画图时才下载，**页面启动不受影响**（`client.js` 仍是 67 KB / gzip 19 KB）。
+  首次画图时才下载，**页面启动不受影响**（`client.js` 仍是 ~70 KB / gzip 20 KB）。
 - chunk 自注册为 `window.__ModuleLoader__.load({ id: 'dsh-token-chart', chunk: 'client.echarts.js', factory })`；
   `id` 是**客户端条目 id（包名）**，模块系统据此登记为 `dsh-token-chart/client.echarts.js`——正是 `require.async` 查的键。
-  `chunk/build.mjs` 会在写盘后断言这三个字段，写错即构建失败。
+  `scripts/build-chunk.mjs` 会在写盘后断言这三个字段，写错即构建失败。
 - chunk 必须自包含：只有平台种子（`react` 等）与兄弟 chunk 可用，其它裸包名在浏览器里无法解析。
 - 体积：**619 KB / gzip 240 KB**（树摇后保留 ECharts 核心、柱/折线/饼三种系列、grid/tooltip/legend/dataZoom 与 SVG 渲染器；完整 dist 是 1.12 MB / 436 KB）。
 - 主题：ECharts 需要具体颜色，插件用 `getComputedStyle` 读 `--dsw-alias-*` token 并在明暗切换时重绘。
@@ -79,7 +90,7 @@ dsh-token-chart/
 
 ```sh
 npm install            # 安装 devDependencies（echarts + esbuild，仅构建需要）
-npm run build:chunk    # 产出 client.echarts.js 并打印体积与自检结果
+npm run build:chunk    # 产出 lib/client.echarts.js 并打印体积与自检结果
 ```
 
 > 注意：chunk 的 URL 版本号跟随**入口 `client.js`** 的 rev，因此每次改动 `client.js`（开发热更新、插件升级）
@@ -96,7 +107,7 @@ src/client/styles/components.less  组件规则（dtc- 前缀命名空间）
 src/client/styles/index.less       Less 入口
 src/client/styles/tailwind.css     Tailwind 入口（theme + utilities，显式类名清单）
         ↓ npm run build:styles
-client/token-chart.css             产物：13 KB / 3.5 KB(gz)
+lib/token-chart.css               产物：14 KB / 4 KB(gz)
         ↓ 宿主以文件形式下发
 GET /token-chart/assets/token-chart.css
         ↓ 浏览器半边引用
@@ -164,19 +175,20 @@ src/                     源码（唯一事实来源）
   buckets.ts prefs.ts paths.ts constants.ts types.ts update.ts
   chunk/echarts.entry.ts ECharts chunk 入口（tree-shaken）
   client/                浏览器半边，按 dsh-market 的扁平模块组织
-    styles/              Tailwind + Less 源文件 → client/token-chart.css
+    styles/              Tailwind + Less 源文件 → lib/token-chart.css
     index.tsx            入口：注册各座位 + 拦截「用量」胶囊
     api.ts               偏好存储与轮询 hooks
     charts.tsx           内置 SVG 回退图（chunk 不可用时）
     mount.tsx            ECharts 挂载：懒加载 chunk、主题 token、option
     series.tsx table.tsx ui.tsx drawer.tsx panel.tsx settings.tsx
-    chrome.tsx pill.tsx styles.ts contract.ts models.ts format.ts locales.ts react.ts
-lib/                     宿主半边产物（tsc 输出 + lib/types/*.d.ts）
-client/                  浏览器半边产物
+    chrome.tsx pill.tsx contract.ts models.ts format.ts locales.ts react.ts
+lib/                     全部构建产物（git 忽略）
+  index.js store.js …    宿主半边（tsc，含 lib/types/*.d.ts）
   client.js              esbuild 打包的 __ModuleLoader__ 工厂（不含任何 CSS 文本）
   client.echarts.js      包内懒加载 chunk
   token-chart.css        Tailwind + Less 编译出的样式表，由宿主路由下发
-scripts/                 build-client.mjs / build-chunk.mjs / client-contract.mjs
+scripts/                 build-client.mjs / build-chunk.mjs / build-styles.mjs /
+                         client-contract.mjs / preflight.mjs
 tests/                   vitest 用例
   host.test.mjs          宿主半边：折叠、存储、API、版本检查、配置持久化
   client.test.mjs        浏览器半边：座位注册、图表、表格分页、设置页、抽屉
@@ -186,16 +198,16 @@ tests/                   vitest 用例
 
 技术栈与 dsh-market 对齐：**TypeScript + ESM + React 18（JSX，automatic runtime）**，`react` / `react/jsx-runtime` 作为平台种子保持 external，由加载器的模块表在运行时提供；宿主半边 `tsc` 编译，浏览器半边 `esbuild` 打包成 DSH 客户端模块契约的 CJS 工厂（`window.__ModuleLoader__.load({ id, factory })`）。
 
-| 命令                | 作用                                                                                                              |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck` | 两个项目分别类型检查（宿主 + 浏览器）                                                                             |
-| `npm run build`     | `build:host`(tsc → lib/) + `build:client`(esbuild → client/client.js) + `build:chunk`(→ client/client.echarts.js) |
-| `npm run test`      | 宿主与浏览器用例（浏览器用例在 jsdom 中驱动真实构建产物）                                                         |
-| `npm run format`    | prettier 格式化 `src/**` 与脚本                                                                                   |
+| 命令                 | 作用                                                                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`  | 两个项目分别类型检查（宿主 + 浏览器）                                                                                              |
+| `npm run build`      | 清空 `lib/` 后全量重建：`build:host`(tsc) + `build:styles`(tailwind+less) + `build:client`(esbuild) + `build:chunk`(esbuild)         |
+| `npm run check`      | 发布前的门禁：typecheck + build + preflight + 宿主用例                                                                             |
+| `npm run preflight`  | 产物与元数据自检：loader id、包名、四件产物、registry、lockfile                                                                     |
+| `npm run test`       | 宿主与浏览器用例（浏览器用例在 jsdom 中驱动真实构建产物）                                                                          |
+| `npm run format`     | prettier 格式化 `src/**`、`tests/**` 与脚本                                                                                        |
 
-`package.json` 的 `main` 指向 `lib/index.js`，`exports["./client"]` 指向 `client/client.js`——与 dsh-market 相同。改动宿主半边后由 profile 的 hmr 监听根热重载；改动**客户端产物路径**（本次重构即属此类）需要重启应用一次，DSH 对「替换已安装包」的既有语义如此。
-
-> 注：根目录下的 `client.js` / `client.echarts.js` 是重构前的旧产物，仅供本次重启前的当前页面继续使用，重启后可删除。
+`package.json` 的 `main` 指向 `lib/index.js`，`exports["./client"]` 指向 `lib/client.js`——与官方 DSH client preset 和 dsh-better-sidebar 同形：**两个半边同处一个产物目录**。宿主半边改动由 profile 的 hmr 监听根热重载；改动**客户端产物路径**需要重启应用一次，DSH 对「替换已安装包」的既有语义如此。
 
 ## 开发：Host 半边热加载
 
@@ -208,16 +220,50 @@ tests/                   vitest 用例
   name: '@deepseek-ai/dsh-hmr'
   config:
     root:
-      - /Users/bytedance/own/dsh-token-chart
+      - /path/to/dsh-token-chart
 ```
 
 ## 安装
 
-```sh
-dsh plugin --profile <profile> add /Users/bytedance/own/dsh-token-chart
+三种方式都受支持。产物不在仓库里，因此**要么由发布流程预构建（npm/tarball），要么在安装处现场构建（link/git）**：
+
+| 方式       | 命令                                                                        | 产物从哪来                            | 你需要做的                          |
+| ---------- | --------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------- |
+| npm（推荐） | `dsh plugin --profile <profile> add dsh-token-chart`                        | 发布时 `prepack` 预构建，tarball 自带 | 无 —— 不执行任何构建脚本            |
+| tarball    | `npm pack` → `dsh plugin --profile <profile> add ./dsh-token-chart-0.1.0.tgz` | 同上，`prepack` 在打包机上构建        | 打包机需能跑构建（Node 20+）        |
+| 本地 link  | `dsh plugin --profile <profile> add /path/to/dsh-token-chart`               | 工作区里的 `lib/`，**由你手动构建**   | `npm install`（触发 `prepare`）或 `npm run build` |
+| git        | `dsh plugin --profile <profile> add github:dsh-external/dsh-token-chart`    | 安装时用包的 `prepare` 现场构建       | 先授权构建脚本（见下）              |
+
+**git 安装必须先授权构建脚本。** pnpm ≥10 默认不执行依赖的构建脚本，第一次 `add` 会失败并打印需要写入的键与值（含 commit sha，要原样照抄）；把它加进该 profile 的 `pnpm-workspace.yaml` 再重试：
+
+```yaml
+# ~/.dsh/profiles/<profile>/pnpm-workspace.yaml
+allowBuilds: # pnpm ≥11
+  dsh-token-chart@git+https://github.com/dsh-external/dsh-token-chart#<sha>: true
+
+# onlyBuiltDependencies: # pnpm 10 的等价键
+#   - "dsh-token-chart@git+https://github.com/dsh-external/dsh-token-chart#<sha>"
 ```
 
-或在 Harness 中通过 `plugin_manager` 的 `install_bundle`，target 为该包的绝对目录。
+建议连同 commit 一起锁定：`dsh plugin add github:dsh-external/dsh-token-chart#<sha>`。授权意味着**允许该包在你的机器上执行代码**（这里是它的 `prepare` 构建），只对信任的来源授权。
+
+> **构建环境提醒**：安装期构建跑在 dsh 进程继承到的环境里——图形界面 / launchd / systemd / 开始菜单启动的 dsh **不会**继承你终端的环境。`build:styles` 依赖 tailwind 的原生模块（lightningcss），若该环境的 Node 加载不了原生模块（macOS 上常见于带硬化运行时、签名 Team ID 不匹配的 Node），`prepare` 会失败。遇到这种情况改用 npm/tarball 方式，或从终端执行安装。
+
+## 兼容性与网络行为
+
+- `engines.dsh` 声明为 `>=0.2.0-rc.2`。**当前 DSH 安装器不强制校验该字段**，它只是作者的兼容性声明。
+- 唯一的出网行为是**版本检查**：向 profile 的 `.npmrc` 所指 registry 查询本包最新版（缺省回退 `https://registry.npmmirror.com/`，宿主侧缓存 30 分钟、超时 12 秒）。用量数据只写在本机 `~/.dsh/storages/dsh-token-chart/usage.json`，不上报任何遥测。
+- 运行时**零依赖**：宿主半边不 import 任何 `@deepseek-ai/*`，浏览器半边的 external 只有 react 平台种子，因此安装不需要 peer 解析或共享实例授权。
+
+## 发布（维护者）
+
+```sh
+npm version patch      # 版本号即 tag，更新检查按版本号判断，两者务必一致
+npm run check          # typecheck + build + preflight + 宿主用例
+npm publish            # publishConfig 已固定发往 registry.npmjs.org
+```
+
+`prepack` 在打包前全量重建并跑 `scripts/preflight.mjs`，因此 tarball 一定带着 `lib/` 里的四件产物（宿主入口、浏览器 bundle、ECharts chunk、样式表）与类型声明；`lib/` 本身不入 git。
 
 ## 验证
 
@@ -235,4 +281,4 @@ DSH_ORIGIN=http://127.0.0.1:19387 npm run test:client
 `client.test.mjs` 需要 `react`/`react-dom` 18 与 `jsdom`；默认从 npx 缓存目录解析，可用 `REACT_DIR` / `JSDOM_DIR` 覆盖。
 jsdom 没有 canvas 与布局，脚本会补 `HTMLCanvasElement.getContext`（文本测量）与 `clientWidth`，浏览器端不需要这些垫片。
 
-<small>注：`test/host.test.mjs` 必须用独立的 `DSH_HOME` 运行，否则会写入真实用量库。</small>
+<small>注：`tests/host.test.mjs` 必须用独立的 `DSH_HOME` 运行，否则会写入真实用量库。</small>

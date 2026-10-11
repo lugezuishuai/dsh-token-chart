@@ -1,7 +1,7 @@
 /**
  * Harness for the dsh-token-chart BROWSER half.
  *
- * Loads the built `client/client.js` into jsdom, mounts its registered
+ * Loads the built `lib/client.js` into jsdom, mounts its registered
  * components with React 18, and lets them talk to the LIVE host API. The chart
  * chunk is emulated with the loader's own semantics: the artifact
  * `client.echarts.js` is executed, its `window.__ModuleLoader__.load(...)`
@@ -27,8 +27,8 @@ const { JSDOM } = createRequire(`${NPX_JSDOM}/`)('jsdom')
 
 const ORIGIN = process.env.DSH_ORIGIN ?? 'http://127.0.0.1:19387'
 const SESSION_ID = process.env.DSH_SESSION_ID ?? 'session-427622bf-20a1-4778-837b-32d9cbdaa3f7'
-const CLIENT_JS = new URL('../../client/client.js', import.meta.url)
-const CHUNK_JS = new URL('../../client/client.echarts.js', import.meta.url)
+const CLIENT_JS = new URL('../../lib/client.js', import.meta.url)
+const CHUNK_JS = new URL('../../lib/client.echarts.js', import.meta.url)
 
 /**
  * Run the browser-half suite once.

@@ -596,12 +596,12 @@ export function apply(ctx: HostContext): void {
    *
    * The browser half links it instead of carrying CSS text, so a style change
    * never invalidates the client bundle. The path is resolved next to this
-   * module (`lib/` → `client/token-chart.css`), with `ETag`-based revalidation
-   * so a rebuild is picked up without hard-coding a version.
+   * module (`lib/index.js` → `lib/token-chart.css`), with `ETag`-based
+   * revalidation so a rebuild is picked up without hard-coding a version.
    */
   async function readStylesheet() {
     try {
-      return await readFile(new URL('../client/token-chart.css', import.meta.url), 'utf8')
+      return await readFile(new URL('./token-chart.css', import.meta.url), 'utf8')
     } catch (error) {
       warn('dsh-token-chart: stylesheet missing (%s)', String(error))
       return undefined

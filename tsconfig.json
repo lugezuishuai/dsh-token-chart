@@ -1,7 +1,7 @@
 {
   // Host half: TypeScript in src/, compiled by tsc to lib/ (package.json main).
   // `src/client` is a separate project (tsconfig.client.json) bundled for the
-  // browser instead of compiled.
+  // browser into the same lib/ instead of compiled.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2024"],
@@ -20,5 +20,5 @@
     "skipLibCheck": true
   },
   "include": ["src"],
-  "exclude": ["src/client", "lib", "client", "scripts", "test"]
+  "exclude": ["src/client", "lib", "scripts", "tests"]
 }
