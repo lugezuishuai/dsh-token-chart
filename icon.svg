@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Token usage chart">
+  <rect x="6" y="34" width="10" height="22" rx="2" fill="#4C6EF5"/>
+  <rect x="20" y="22" width="10" height="34" rx="2" fill="#4C6EF5" opacity="0.8"/>
+  <rect x="34" y="28" width="10" height="28" rx="2" fill="#4C6EF5" opacity="0.6"/>
+  <rect x="48" y="14" width="10" height="42" rx="2" fill="#4C6EF5" opacity="0.45"/>
+  <path d="M8 40 L24 26 L38 32 L52 16" fill="none" stroke="#F59F00" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

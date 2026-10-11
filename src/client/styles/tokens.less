@@ -1,0 +1,25 @@
+/**
+ * Shared Less variables for the plugin's styles.
+ *
+ * They deliberately hold the product's own CSS custom properties rather than
+ * literal colors: the tokens resolve at paint time, so the plugin follows the
+ * active theme (light / dark / high contrast) without a second definition.
+ */
+
+@label-primary: var(--dsw-alias-label-primary);
+@label-secondary: var(--dsw-alias-label-secondary);
+@label-tertiary: var(--dsw-alias-label-tertiary);
+@border-l1: var(--dsw-alias-border-l1);
+@border-l2: var(--dsw-alias-border-l2);
+@bg-layer-1: var(--dsw-alias-bg-layer-1);
+@bg-layer-2: var(--dsw-alias-bg-layer-2);
+@bg-base: var(--dsw-alias-bg-base);
+@brand: var(--dsw-alias-brand-primary);
+@hover-bg: var(--dsw-alias-interactive-bg-hover);
+@state-error: var(--dsw-alias-state-error-primary);
+@state-warn: var(--dsw-alias-state-warn-primary);
+
+/** Radius and spacing the plugin reuses across surfaces. */
+@radius-chip: 6px;
+@radius-card: 12px;
+@font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;

@@ -1,0 +1,21 @@
+/**
+ * Tailwind entry for the plugin's stylesheet.
+ *
+ * Two deliberate choices, both about living inside someone else's page:
+ *
+ * 1. Only the theme and utilities layers are imported. Tailwind's preflight is a
+ *    global reset, and a plugin must never rewrite the product's base styles.
+ * 2. Auto-detection is off (`source(none)`) and the class list is declared
+ *    explicitly with `@source inline(...)`. Scanning the repository would match
+ *    ordinary words in comments and docs and emit global rules like `.block` or
+ *    `.table`; the explicit list keeps the artifact to exactly what the markup
+ *    uses. Everything lands in `@layer utilities`, so it also loses to any
+ *    unlayered rule the product ships.
+ *
+ * @module dsh-token-chart/client/styles/tailwind
+ */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+
+/* Exactly the utilities the plugin's markup applies, prefix-free. */
+@source inline('flex items-center justify-end gap-1 box-border h-[22px] w-[22px] min-w-11 cursor-pointer rounded-md border border-[color:var(--dsw-alias-border-l1)] bg-transparent p-0 text-[11px] text-[13px] text-center leading-none text-[color:var(--dsw-alias-label-secondary)] text-[color:var(--dsw-alias-label-primary)] enabled:hover:bg-[color:var(--dsw-alias-interactive-bg-hover)] disabled:cursor-default disabled:opacity-40 opacity-70 hover:opacity-100 [font-variant-numeric:tabular-nums]');

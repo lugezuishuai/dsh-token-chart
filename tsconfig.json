@@ -1,0 +1,24 @@
+{
+  // Host half: TypeScript in src/, compiled by tsc to lib/ (package.json main).
+  // `src/client` is a separate project (tsconfig.client.json) bundled for the
+  // browser instead of compiled.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2024"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "outDir": "lib",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationDir": "lib/types",
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["src/client", "lib", "client", "scripts", "test"]
+}

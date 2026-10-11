@@ -1,0 +1,9 @@
+node_modules/
+node_modules/.cache/
+*.tmp
+*.log
+
+# 构建产物：src/ 是唯一事实来源。
+# `npm run build` 生成 lib/（宿主 JS + 浏览器 JS + 样式表 + 类型声明）；
+# git 安装靠 prepare、tarball/npm 靠 prepack 现场构建，仓库里不保存产物。
+lib/

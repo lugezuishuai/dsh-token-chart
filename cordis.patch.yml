@@ -1,0 +1,7 @@
+# dsh-token-chart bundle patch
+#
+# One Host row mounts the collector/API half; the browser half is attached by
+# the client scan through this package's `./client` export and `dsh.client`.
+- insert:
+    - id: token-chart
+      name: 'dsh-token-chart'

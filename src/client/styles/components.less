@@ -1,0 +1,191 @@
+/**
+ * Component styles for the plugin's surfaces.
+ *
+ * Everything is namespaced with the `dtc-` prefix so a plugin stylesheet can
+ * never reach into the product's own DOM. Utility classes (Tailwind) handle
+ * layout in the newer surfaces; the rules here carry the pieces that read
+ * better as named components.
+ *
+ * @module dsh-token-chart/client/styles/components
+ */
+@import './tokens.less';
+
+.dtc-root { color: @label-primary; font-size: 13px; line-height: 1.55; }
+.dtc-panel { padding: 20px 24px 32px; overflow: auto; height: 100%; box-sizing: border-box; }
+.dtc-drawer { padding: 12px 14px 24px; overflow: auto; height: 100%; box-sizing: border-box; }
+.dtc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.dtc-title { margin: 0; font-size: 16px; font-weight: 600; }
+.dtc-subtitle { margin: 2px 0 0; color: @label-secondary; font-size: 12px; }
+.dtc-toolbar { display: flex; gap: 8px; align-items: center; }
+.dtc-button { border: 1px solid @border-l2; background: @bg-layer-1; color: @label-primary; border-radius: 8px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+.dtc-button:hover { background: @bg-layer-2; }
+.dtc-filters { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.dtc-segmented { display: inline-flex; border: 1px solid @border-l1; border-radius: 9px; overflow: hidden; background: @bg-layer-1; }
+.dtc-segment { border: 0; background: transparent; color: @label-secondary; padding: 5px 14px; font-size: 12px; cursor: pointer; }
+.dtc-segment + .dtc-segment { border-left: 1px solid @border-l1; }
+.dtc-segment-active { background: @bg-layer-2; color: @label-primary; font-weight: 600; }
+.dtc-meta { color: @label-secondary; font-size: 11px; }
+.dtc-banner { display: flex; align-items: baseline; gap: 10px; padding: 12px 14px; border: 1px solid @border-l1; border-radius: 12px; background: @bg-layer-1; margin-bottom: 12px; }
+.dtc-banner-label { color: @label-secondary; font-size: 12px; }
+.dtc-banner-value { font-size: 24px; font-weight: 650; letter-spacing: .5px; }
+.dtc-banner-extra { margin-left: auto; color: @label-secondary; font-size: 11px; }
+.dtc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.dtc-kpi { border: 1px solid @border-l1; border-radius: 10px; padding: 8px 10px; background: @bg-layer-1; display: flex; flex-direction: column; gap: 2px; }
+.dtc-kpi-label { color: @label-secondary; font-size: 11px; }
+.dtc-kpi-value { font-size: 17px; font-weight: 600; }
+.dtc-kpi-exact { color: @label-secondary; font-size: 10px; }
+.dtc-facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid @border-l1; border-radius: 10px; background: @bg-layer-1; font-size: 12px; }
+.dtc-facts dt { color: @label-secondary; }
+.dtc-facts dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.dtc-section-title { font-size: 12px; color: @label-secondary; margin: 4px 0 6px; }
+.dtc-chart { width: 100%; }
+.dtc-chart svg { display: block; max-width: 100%; }
+.dtc-chart-pie { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dtc-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 11px; color: @label-secondary; }
+.dtc-legend-column { flex-direction: column; gap: 4px; margin-top: 0; }
+.dtc-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.dtc-swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+/* The block spans the surface; only the table inside it scrolls. */
+.dtc-table-block { width: 100%; }
+
+.dtc-table-wrap { margin-top: 12px; overflow: auto; border: 1px solid @border-l1; border-radius: 10px; }
+.dtc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dtc-table th, .dtc-table td { padding: 6px 10px; border-bottom: 1px solid @border-l1; text-align: left; white-space: nowrap; }
+.dtc-table th { color: @label-secondary; font-weight: 500; background: @bg-layer-1; position: sticky; top: 0; }
+.dtc-table tbody tr:last-child td { border-bottom: 0; }
+.dtc-right { text-align: right !important; font-variant-numeric: tabular-nums; }
+.dtc-empty { color: @label-secondary; font-size: 12px; padding: 18px 2px; }
+.dtc-error { color: @state-error; font-size: 12px; }
+.dtc-warn { color: @state-warn; font-size: 11px; margin: 6px 0 0; }
+.dtc-footnote { color: @label-secondary; font-size: 11px; line-height: 1.5; margin: 8px 0 0; }
+.dtc-settings { padding: 4px 2px 16px; max-width: 760px; }
+.dtc-card { border: 1px solid @border-l1; border-radius: 12px; padding: 14px 16px; margin: 12px 0; background: @bg-layer-1; }
+.dtc-card-title { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+.dtc-card-hint { margin: 0 0 10px; color: @label-secondary; font-size: 11px; }
+.dtc-field-label { margin: 12px 0 6px; font-size: 12px; color: @label-secondary; }
+.dtc-picker { display: flex; flex-wrap: wrap; gap: 6px; }
+.dtc-chip { border: 1px solid @border-l1; background: @bg-base; color: @label-secondary; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+.dtc-chip:hover { border-color: @border-l2; color: @label-primary; }
+.dtc-chip-active { border-color: @brand; color: @brand; background: color-mix(in srgb, @brand 10%, transparent); font-weight: 600; }
+.dtc-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid @border-l1; }
+.dtc-switch-row:last-child { border-bottom: 0; }
+.dtc-switch-text { display: flex; flex-direction: column; }
+.dtc-switch-label { font-size: 12.5px; }
+.dtc-switch-hint { color: @label-secondary; font-size: 11px; }
+.dtc-switch { width: 36px; height: 20px; border-radius: 999px; border: 1px solid @border-l2; background: @bg-layer-2; position: relative; cursor: pointer; padding: 0; flex: none; }
+.dtc-switch-on { background: @brand; border-color: @brand; }
+.dtc-switch-knob { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: @bg-base; transition: transform .16s ease; }
+.dtc-switch-on .dtc-switch-knob { transform: translateX(16px); }
+.dtc-settings-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.dtc-status { color: @label-secondary; font-size: 11px; }
+.dtc-status-error { color: @state-error; }
+.dtc-plugin-head { display: flex; flex-direction: column; gap: 4px; margin: 2px 0 6px; }
+.dtc-plugin-id { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dtc-plugin-icon { display: inline-flex; color: @label-primary; }
+.dtc-plugin-name { color: @label-secondary; font-size: 12px; }
+.dtc-plugin-version { color: @label-secondary; font-size: 12px; font-variant-numeric: tabular-nums; }
+.dtc-update-button { margin-left: auto; border: 1px solid @label-primary; background: @label-primary; color: @bg-base; border-radius: 8px; padding: 4px 12px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.dtc-update-button:hover { opacity: .88; }
+.dtc-update-button:disabled { opacity: .5; cursor: default; }
+.dtc-plugin-note { color: @label-secondary; font-size: 11px; }
+/* The settings shell owns the nav row; our own row gets the sidebar glyph. */
+[data-dtc-settings-nav] > svg:first-child { display: none; }
+[data-dtc-settings-nav]::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'><g%20fill='black'><rect%20x='3'%20y='12'%20width='4'%20height='9'%20rx='1'/><rect%20x='9'%20y='8'%20width='4'%20height='13'%20rx='1'/><rect%20x='15'%20y='4'%20width='4'%20height='17'%20rx='1'/></g></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml,<svg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'><g%20fill='black'><rect%20x='3'%20y='12'%20width='4'%20height='9'%20rx='1'/><rect%20x='9'%20y='8'%20width='4'%20height='13'%20rx='1'/><rect%20x='15'%20y='4'%20width='4'%20height='17'%20rx='1'/></g></svg>") center / contain no-repeat;
+}
+.dtc-echarts { min-width: 120px; }
+.dtc-echarts svg { display: block; max-width: 100%; }
+.dtc-engine { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; }
+.dtc-engine-label { color: @label-secondary; }
+.dtc-engine[data-dtc-engine="echarts"] { color: @label-primary; }
+.dtc-engine[data-dtc-engine="svg"] { color: @state-warn; }
+.dtc-header-button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid @border-l1; background: transparent; color: @label-secondary; border-radius: 8px; padding: 3px 9px; font-size: 12px; cursor: pointer; }
+.dtc-header-button:hover { color: @label-primary; border-color: @border-l2; }
+.dtc-header-label { white-space: nowrap; }
+
+/* ---------------------------------------------------------------- pager */
+
+/* The pager sits at the bottom-right of the table; the row count stays left. */
+/* Layout lives here rather than only in utilities: these rules are unlayered, so
+   a product rule that targets `nav` cannot outrank the pager's own class. */
+.dtc-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: @label-secondary;
+}
+
+.dtc-pager-total {
+  margin-right: auto;
+}
+
+.dtc-page {
+  box-sizing: border-box;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid @border-l1;
+  border-radius: @radius-chip;
+  background: @bg-layer-1;
+  color: @label-primary;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dtc-page:hover:not(:disabled) {
+  background: @hover-bg;
+}
+
+.dtc-page:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* The page in view: brand border and text, no fill. */
+.dtc-page-current {
+  border-color: @brand;
+  color: @brand;
+  background: transparent;
+}
+
+.dtc-page-gap {
+  padding: 0 2px;
+}
+
+.dtc-page-size {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+}
+
+.dtc-select {
+  appearance: none;
+  height: 26px;
+  padding: 0 22px 0 8px;
+  border: 1px solid @border-l1;
+  border-radius: @radius-chip;
+  background: @bg-layer-1;
+  color: @label-primary;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dtc-select-chevron {
+  position: absolute;
+  right: 6px;
+  color: @label-secondary;
+  pointer-events: none;
+}
