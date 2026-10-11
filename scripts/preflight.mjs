@@ -76,21 +76,27 @@ if (!patch.includes(`name: '${pkg.name}'`)) {
 
 /* ---- consumer-side resolution ------------------------------------------ */
 
-// A lockfile that resolves to a mirror publishes fine and then fails in the
-// consumer's install: a full tarball URL is not a registry name they can
-// re-resolve. Nothing about running `npm install` behind a mirror makes this
-// visible locally, so the guard belongs next to the package.
+// A lockfile that resolves to a private registry or a mirror publishes fine and
+// then fails in the consumer's install: a full tarball URL is not a registry
+// name they can re-resolve. Nothing about running `npm install` behind such a
+// registry makes this visible locally, so the guard belongs next to the package.
+// The public mirrors are tolerated (`registry.npmmirror.com`: this project's
+// .npmrc points installs there, and npm rewrites the host anyway); anything
+// else — an internal registry, a corporate proxy — is a leak.
+const ALLOWED_LOCK_HOSTS = new Set(['https://registry.npmjs.org', 'https://registry.npmmirror.com'])
 if (existsSync('package-lock.json')) {
   const lock = readFileSync('package-lock.json', 'utf8')
   const foreign = [
     ...new Set(
       [...lock.matchAll(/"resolved": "(https?:\/\/[^/"]+)/g)]
         .map((match) => match[1])
-        .filter((host) => host !== 'https://registry.npmjs.org'),
+        .filter((host) => !ALLOWED_LOCK_HOSTS.has(host)),
     ),
   ]
   if (foreign.length > 0) {
-    failures.push(`package-lock.json resolves to ${foreign.join(', ')} — rewrite it against https://registry.npmjs.org`)
+    failures.push(
+      `package-lock.json resolves to ${foreign.join(', ')} — only ${[...ALLOWED_LOCK_HOSTS].join(' and ')} are allowed`,
+    )
   }
 }
 

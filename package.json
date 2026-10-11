@@ -50,15 +50,15 @@
     "node": ">=20",
     "dsh": ">=0.2.0-rc.2"
   },
-  "author": "dsh-external",
+  "author": "lugezuishuai",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dsh-external/dsh-token-chart.git"
+    "url": "git+https://github.com/lugezuishuai/dsh-token-chart.git"
   },
-  "homepage": "https://github.com/dsh-external/dsh-token-chart#readme",
+  "homepage": "https://github.com/lugezuishuai/dsh-token-chart#readme",
   "bugs": {
-    "url": "https://github.com/dsh-external/dsh-token-chart/issues"
+    "url": "https://github.com/lugezuishuai/dsh-token-chart/issues"
   },
   "keywords": [
     "deepseek",

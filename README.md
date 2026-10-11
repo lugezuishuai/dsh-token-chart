@@ -2,7 +2,7 @@
 
 DeepSeek Harness 插件：统计并以图表方式可视化 Token 用量。
 
-兼容 DSH `>=0.2.0-rc.2` · MIT License · 作者 dsh-external · 运行时零依赖（不需要 `dependencies`，也不需要 peer 授权）
+兼容 DSH `>=0.2.0-rc.2` · MIT License · 作者 lugezuishuai · 运行时零依赖（不需要 `dependencies`，也不需要 peer 授权）
 
 ## 功能
 
@@ -232,20 +232,20 @@ tests/                   vitest 用例
 | npm（推荐） | `dsh plugin --profile <profile> add dsh-token-chart`                        | 发布时 `prepack` 预构建，tarball 自带 | 无 —— 不执行任何构建脚本            |
 | tarball    | `npm pack` → `dsh plugin --profile <profile> add ./dsh-token-chart-0.1.0.tgz` | 同上，`prepack` 在打包机上构建        | 打包机需能跑构建（Node 20+）        |
 | 本地 link  | `dsh plugin --profile <profile> add /path/to/dsh-token-chart`               | 工作区里的 `lib/`，**由你手动构建**   | `npm install`（触发 `prepare`）或 `npm run build` |
-| git        | `dsh plugin --profile <profile> add github:dsh-external/dsh-token-chart`    | 安装时用包的 `prepare` 现场构建       | 先授权构建脚本（见下）              |
+| git        | `dsh plugin --profile <profile> add github:lugezuishuai/dsh-token-chart`    | 安装时用包的 `prepare` 现场构建       | 先授权构建脚本（见下）              |
 
 **git 安装必须先授权构建脚本。** pnpm ≥10 默认不执行依赖的构建脚本，第一次 `add` 会失败并打印需要写入的键与值（含 commit sha，要原样照抄）；把它加进该 profile 的 `pnpm-workspace.yaml` 再重试：
 
 ```yaml
 # ~/.dsh/profiles/<profile>/pnpm-workspace.yaml
 allowBuilds: # pnpm ≥11
-  dsh-token-chart@git+https://github.com/dsh-external/dsh-token-chart#<sha>: true
+  dsh-token-chart@git+https://github.com/lugezuishuai/dsh-token-chart#<sha>: true
 
 # onlyBuiltDependencies: # pnpm 10 的等价键
-#   - "dsh-token-chart@git+https://github.com/dsh-external/dsh-token-chart#<sha>"
+#   - "dsh-token-chart@git+https://github.com/lugezuishuai/dsh-token-chart#<sha>"
 ```
 
-建议连同 commit 一起锁定：`dsh plugin add github:dsh-external/dsh-token-chart#<sha>`。授权意味着**允许该包在你的机器上执行代码**（这里是它的 `prepare` 构建），只对信任的来源授权。
+建议连同 commit 一起锁定：`dsh plugin add github:lugezuishuai/dsh-token-chart#<sha>`。授权意味着**允许该包在你的机器上执行代码**（这里是它的 `prepare` 构建），只对信任的来源授权。
 
 > **构建环境提醒**：安装期构建跑在 dsh 进程继承到的环境里——图形界面 / launchd / systemd / 开始菜单启动的 dsh **不会**继承你终端的环境。`build:styles` 依赖 tailwind 的原生模块（lightningcss），若该环境的 Node 加载不了原生模块（macOS 上常见于带硬化运行时、签名 Team ID 不匹配的 Node），`prepare` 会失败。遇到这种情况改用 npm/tarball 方式，或从终端执行安装。
 
@@ -256,6 +256,8 @@ allowBuilds: # pnpm ≥11
 - 运行时**零依赖**：宿主半边不 import 任何 `@deepseek-ai/*`，浏览器半边的 external 只有 react 平台种子，因此安装不需要 peer 解析或共享实例授权。
 
 ## 发布（维护者）
+
+项目的 `.npmrc` 把**安装**指向 `registry.npmmirror.com`（国内镜像，快且无需凭据）；**发布**由 `package.json#publishConfig.registry` 固定在 `https://registry.npmjs.org/`——npmmirror 是只读镜像，不接受发布，公开分发必须发到 npmjs。
 
 ```sh
 npm version patch      # 版本号即 tag，更新检查按版本号判断，两者务必一致
