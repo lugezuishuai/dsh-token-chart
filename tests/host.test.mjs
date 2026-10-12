@@ -4,7 +4,7 @@
  * route handler to check the JSON the browser half will receive.
  */
 import { readdirSync, readFileSync } from 'node:fs'
-import { mkdtemp } from 'node:fs/promises'
+import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { it } from 'vitest'
@@ -432,6 +432,31 @@ it('folds usage, persists it and serves the API', async () => {
   )
   check('GET /version resolves a registry', String(versionRoute.body.value?.registry).startsWith('http'), true)
   check('GET /version never claims a bogus update', versionRoute.body.value?.updateAvailable, false)
+
+  /* ------------------------------------------------- 安装方式判定（可更新性） --- */
+
+  {
+    // A registry install may update itself in place; a linked checkout may not.
+    // The profile is found through the manifest that declares this package, so
+    // the detection works even though the host process has no DSH_PROFILE_DIR.
+    const profileDir = await mkdtemp(join(tmpdir(), 'dtc-profile-'))
+    const installOf = async (spec) => {
+      await writeFile(
+        join(profileDir, 'package.json'),
+        JSON.stringify({ name: 'probe-profile', private: true, dependencies: { 'dsh-token-chart': spec } }),
+      )
+      process.env.DSH_PROFILE_DIR = profileDir
+      const report = await call('/version')
+      delete process.env.DSH_PROFILE_DIR
+      return report.body.value?.install ?? {}
+    }
+    const registry = await installOf('^0.1.2')
+    check('install kind: a registry range reports "registry"', registry.kind, 'registry')
+    check('install kind: the range is carried through', registry.spec, '^0.1.2')
+    const linked = await installOf('link:../dsh-token-chart')
+    check('install kind: link: reports "local"', linked.kind, 'local')
+    check('install kind: the link spec is carried through', linked.spec, 'link:../dsh-token-chart')
+  }
 
   const updateRoute = await call('/update', { method: 'POST' })
   check('POST /update refuses when nothing newer exists', updateRoute.body.error?.code, 'up-to-date')

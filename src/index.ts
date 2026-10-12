@@ -435,21 +435,52 @@ export function apply(ctx: HostContext): void {
   })()
 
   /**
+   * Profile directories worth probing, nearest first.
+   *
+   * `DSH_PROFILE_DIR` is exported into a profile's *shell calls*, not into the
+   * host process, so the desktop app never has it; walking up from this module
+   * finds the same directory anyway. The walk also covers pnpm's nested layout,
+   * where the package sits under
+   * `node_modules/.pnpm/<name>@<version>/node_modules/<name>`.
+   */
+  function profileDirCandidates(): string[] {
+    const list: string[] = []
+    const configured = process.env.DSH_PROFILE_DIR
+    if (typeof configured === 'string' && configured.trim() !== '') list.push(configured.trim())
+    try {
+      let dir = path.dirname(fileURLToPath(import.meta.url))
+      for (let depth = 0; depth < 8; depth += 1) {
+        const parent = path.dirname(dir)
+        if (parent === dir) break
+        dir = parent
+        list.push(dir)
+      }
+    } catch {
+      /* the probe below degrades to `unknown` */
+    }
+    return list
+  }
+
+  /**
    * How this profile installed the plugin. Only a registry install can update
    * itself: a `link:`/`file:` dependency and an unmounted checkout (the row is
    * mounted from a patch layer, which is how this plugin usually runs) must be
    * updated where they are developed.
+   *
+   * The profile is the nearest ancestor manifest that declares this package as a
+   * dependency — that holds for a registry install and for a linked checkout
+   * alike, and it needs no environment variable.
    */
   function installKind(): VersionReport['install'] {
-    const dir = process.env.DSH_PROFILE_DIR
-    if (typeof dir === 'string' && dir.trim() !== '') {
+    for (const dir of profileDirCandidates()) {
       try {
-        const profile = JSON.parse(readFileSync(path.join(dir.trim(), 'package.json'), 'utf8'))
+        const profile = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'))
         const spec = String(profile?.dependencies?.[manifest.name] ?? '')
+        if (spec === '') continue
         if (spec.startsWith('link:') || spec.startsWith('file:')) return { kind: 'local', spec }
-        if (spec !== '') return { kind: 'registry', spec }
+        return { kind: 'registry', spec }
       } catch {
-        /* fall through to the checkout probe */
+        /* try the next candidate */
       }
     }
     // No profile dependency: distinguish a checkout from an unknown install.
