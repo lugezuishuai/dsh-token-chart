@@ -1,0 +1,37 @@
+name: ci
+
+# PR 门禁：只在合并前验证，不发布、不动仓库内容。
+# 合并进 main 之后的发布（npm + tag + Release）由 release.yml 负责。
+#
+# 跑的是与发布完全相同的门禁命令，所以 PR 上绿了，发布流水线就不会因为
+# 类型错误 / 构建失败 / preflight 不过而红。
+# 浏览器用例（test:client）需要活宿主，不在 CI 里跑。
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci --no-audit --no-fund
+
+      - name: 门禁（typecheck + build + preflight + 宿主用例）
+        run: npm run check
