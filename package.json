@@ -1,6 +1,6 @@
 {
   "name": "dsh-token-chart",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Token usage statistics and chart visualization for DeepSeek Harness: per-session drawer, today / last 3 / last 7 days panel, and chart configuration.",
   "type": "module",
   "main": "lib/index.js",
