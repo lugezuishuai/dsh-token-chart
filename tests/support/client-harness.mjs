@@ -385,7 +385,7 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
   check('panel renders its title', html.includes('Token 用量'))
   check(
     'panel renders the range switcher',
-    html.includes('今天') && html.includes('近 3 天') && html.includes('近 7 天'),
+    html.includes('今天') && html.includes('近 3 天') && html.includes('近 7 天') && html.includes('近 30 天'),
   )
   check(
     'panel renders KPI cards',
@@ -915,6 +915,19 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
         `${rowCount()} rows, pager=${pager()?.getAttribute('data-dtc-pager') ?? 'none'}`,
       )
     }
+
+    // 30 天窗口：30 个日桶、每页 20 条 → 首页满 20 行、共两页
+    const monthChip = [...container.querySelectorAll('button')].find((node) => node.textContent === '近 30 天')
+    await act(async () => {
+      monthChip.click()
+    })
+    await settle(900)
+    check('the 近 30 天 table fills its first page', rowCount() === 20, String(rowCount()))
+    check(
+      '30 day rows paginate into two pages',
+      pager()?.getAttribute('data-dtc-pager') === '1/2',
+      String(pager()?.getAttribute('data-dtc-pager')),
+    )
   }
 
   /* --------- 今天视图的 x 轴是时间，不是序号 ----------------------------- */

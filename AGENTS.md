@@ -12,11 +12,11 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 | 用户可见入口 | 座位 | 内容 |
 | --- | --- | --- |
 | 会话标题栏「用量」按钮 / 消息底部「用量」胶囊 | `conversation.session.header.utilities` | 右侧边栏抽屉：文字统计 + 逐轮趋势图 |
-| 左侧边栏「Token 用量」 | `sidebar.panellist` + `main` | 今天 / 近 3 天 / 近 7 天：KPI + 趋势图 + 分页表格 |
+| 左侧边栏「Token 用量」 | `sidebar.panellist` + `main` | 今天 / 近 3 天 / 近 7 天 / 近 30 天：KPI + 趋势图 + 分页表格 |
 | 设置 →「Token 用量」 | `settings.section` | 图表形式、指标与开关；插件版本与更新按钮 |
 
 - **零运行时依赖**：宿主半边不 import 任何 `@deepseek-ai/*`；浏览器半边的 external 只有 react 平台种子。安装不需要 peer 解析。
-- 数据只落本机：`~/.dsh/storages/dsh-token-chart/usage.json`（7 个自然日滚动），偏好另存 `prefs.json`。
+- 数据只落本机：`~/.dsh/storages/dsh-token-chart/usage.json`（30 个自然日滚动），偏好另存 `prefs.json`。
 - 唯一出网行为是版本检查（profile 的 `.npmrc` registry，缺省 `https://registry.npmmirror.com/`，宿主侧缓存 30 分钟）。
 
 ---
@@ -84,7 +84,7 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 ┌───────────────────────────────┐            ┌──────────────────────────────────────┐
 │ lib/client.js                 │            │ lib/index.js  (Cordis 插件 apply)     │
 │  · 注册 5 类座位               │  JSON API  │  · 订阅 session/event 折叠用量        │
-│  · 拦截产品「用量」胶囊        │ ─────────► │  · 7 天滚动落盘 usage.json            │
+│  · 拦截产品「用量」胶囊        │ ─────────► │  · 30 天滚动落盘 usage.json           │
 │  · 偏好读写、轮询              │ /token-    │  · GET  /token-chart/api/{health,     │
 │ lib/client.echarts.js         │  chart/api │         prefs,overview,session,version}│
 │  · require.async 懒加载        │            │  · POST /token-chart/api/{prefs,      │
@@ -199,6 +199,7 @@ dsh-token-chart/
 | 新增指标 | `src/constants.ts#METRIC_IDS` → `buckets.ts#derived` → `src/types.ts` → `client/format.ts` + `locales.ts` |
 | 新增座位 | `src/client/index.tsx` + `package.json#dsh.client.inject` |
 | 新增 API | `src/index.ts` 的 `routes` 表 + README 的 API 表 + `tests/host.test.mjs` |
+| 改保留期 / 新增区间 | `src/constants.ts`（`RETENTION_DAYS`、`RANGE_DAYS`）→ `src/client/panel.tsx` 分段控件 + `locales.ts`（zh+en）→ `tests/host.test.mjs`（窗口与滚动丢弃）+ `tests/support/client-harness.mjs`（点按钮、分页页数）→ README/AGENTS 的区间与保留期描述 |
 | 新增产物文件 | 构建脚本 `OUT` + `package.json#files` + `scripts/preflight.mjs#artifacts` |
 | 改样式 | `src/client/styles/**` → `npm run build:styles`；不要引入 preflight，工具类要进 `@source inline(...)` |
 | 升 DSH 基线 | `package.json#engines.dsh` + README 兼容性段 + 全量 `npm run check` + 真机挂载冒烟 |

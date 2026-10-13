@@ -5,10 +5,11 @@
  */
 export const zh = {
   'panel.title': 'Token 用量',
-  'panel.subtitle': '统计今天、近 3 天、近 7 天的 Token 用量',
+  'panel.subtitle': '统计今天、近 3 天、近 7 天、近 30 天的 Token 用量',
   'panel.range.today': '今天',
   'panel.range.3d': '近 3 天',
   'panel.range.7d': '近 7 天',
+  'panel.range.30d': '近 30 天',
   'panel.refresh': '刷新',
   'panel.loading': '正在统计…',
   'panel.empty': '所选区间内还没有 Token 用量记录',
@@ -83,10 +84,11 @@ export const zh = {
 }
 export const en = {
   'panel.title': 'Token usage',
-  'panel.subtitle': 'Today, last 3 days, and last 7 days of token usage',
+  'panel.subtitle': 'Today, last 3, 7 and 30 days of token usage',
   'panel.range.today': 'Today',
   'panel.range.3d': 'Last 3 days',
   'panel.range.7d': 'Last 7 days',
+  'panel.range.30d': 'Last 30 days',
   'panel.refresh': 'Refresh',
   'panel.loading': 'Collecting…',
   'panel.empty': 'No token usage recorded in this window',

@@ -113,6 +113,7 @@ export function DailyUsagePanel({ t }: { t: Translate }) {
             { value: 'today', label: t('panel.range.today') },
             { value: '3d', label: t('panel.range.3d') },
             { value: '7d', label: t('panel.range.7d') },
+            { value: '30d', label: t('panel.range.30d') },
           ]}
         />
         {report !== undefined ? (

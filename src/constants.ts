@@ -7,8 +7,8 @@
 /** The plugin's package name: the client entry id and the artifact key. */
 export const PACKAGE_NAME = 'dsh-token-chart'
 
-/** Retention window: only the newest 7 calendar days are kept on disk. */
-export const RETENTION_DAYS = 7
+/** Retention window: only the newest 30 calendar days are kept on disk. */
+export const RETENTION_DAYS = 30
 /** Store schema version; a document from another version is rebuilt from logs. */
 export const STORE_VERSION = 2
 
@@ -24,3 +24,11 @@ export const UPDATE_FETCH_TIMEOUT_MS = 12000
 
 export const METRIC_IDS = ['input', 'output', 'cache', 'total'] as const
 export const CHART_IDS = ['bar', 'line', 'pie', 'table', 'multi-bar', 'multi-line', 'bar-line'] as const
+
+/**
+ * Calendar windows the daily panel can request: range id → number of days.
+ *
+ * `30d` is the retention window itself, so it is spelled in terms of
+ * {@link RETENTION_DAYS} — widening the retention widens the widest view with it.
+ */
+export const RANGE_DAYS: Record<string, number> = { today: 1, '3d': 3, '7d': 7, '30d': RETENTION_DAYS }

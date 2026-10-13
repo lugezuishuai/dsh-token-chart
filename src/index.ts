@@ -20,6 +20,7 @@ import {
   API_PREFIX,
   BACKFILL_SESSION_LIMIT,
   PACKAGE_NAME,
+  RANGE_DAYS,
   RETENTION_DAYS,
   SAVE_DEBOUNCE_MS,
   UPDATE_CHECK_TTL_MS,
@@ -349,10 +350,10 @@ export function apply(ctx: HostContext): void {
 
   /**
    * One report over a calendar window.
-   * @param range - `today`, `3d`, or `7d`.
+   * @param range - `today`, `3d`, `7d`, or `30d` (the retention window itself).
    */
   function overviewReport(range: string): OverviewReport {
-    const days = range === '3d' ? 3 : range === '7d' ? RETENTION_DAYS : 1
+    const days = RANGE_DAYS[range] ?? 1
     const floor = startOfLocalDay(days - 1)
     const rows = store.turns().filter((row) => row.lastTime >= floor)
     const totals = zeroBuckets()

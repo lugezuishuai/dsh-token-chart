@@ -89,7 +89,8 @@ async function mount(homeDir) {
 }
 
 it('folds usage, persists it and serves the API', async () => {
-  const main = await mount(await mkdtemp(join(tmpdir(), 'dtc-main-')))
+  const homeDir = await mkdtemp(join(tmpdir(), 'dtc-main-'))
+  const main = await mount(homeDir)
   console.log(
     'routes:',
     main.routes.map((route) => `${route.kind} ${route.path}`),
@@ -191,6 +192,18 @@ it('folds usage, persists it and serves the API', async () => {
     data: { message: { id: 't1', role: 'tool', content: [] } },
   })
 
+  /* Session C: 45 days old, i.e. past the 30-day retention window. It must never
+   * reach a report, and the next save must drop it from the store. */
+  emit(
+    'sess-C',
+    assistantMessage(
+      1,
+      1,
+      { inputTokens: 7, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0, totalTokens: 10 },
+      noonToday - 45 * 24 * HOUR,
+    ),
+  )
+
   const checks = []
   function check(name, actual, expected) {
     const pass = JSON.stringify(actual) === JSON.stringify(expected)
@@ -229,6 +242,32 @@ it('folds usage, persists it and serves the API', async () => {
   check('3d buckets', threeDays.body.value.buckets.length, 3)
   check('3d last bucket total', threeDays.body.value.buckets.at(-1).total, 1020 + 60 + 1330)
   check('3d yesterday bucket total', threeDays.body.value.buckets.at(-2).total, 15)
+
+  const sevenDays = await call('/overview', { search: '?range=7d' })
+  check('7d buckets', sevenDays.body.value.buckets.length, 7)
+
+  const thirtyDays = await call('/overview', { search: '?range=30d' })
+  check('30d window spans 30 days', thirtyDays.body.value.days, 30)
+  check('30d buckets', thirtyDays.body.value.buckets.length, 30)
+  check('30d reports the retention window', thirtyDays.body.value.retentionDays, 30)
+  // Session C is 45 days old, so the widest window equals the 3-day total.
+  check('30d excludes turns past the retention window', thirtyDays.body.value.totals.total, threeDays.body.value.totals.total)
+  check('30d ignores the expired session', thirtyDays.body.value.totals.sessions, 1)
+  check('an unknown range falls back to today', (await call('/overview', { search: '?range=nonsense' })).body.value.days, 1)
+
+  /* --------------------- 保留期：超出窗口的数据滚动丢弃 --------------------- */
+  {
+    // The save is debounced; once it lands the expired session is gone from both
+    // the running store and the file on disk.
+    await new Promise((resolve) => setTimeout(resolve, 1600))
+    const healthAfter = await call('/health')
+    check('the expired session is no longer tracked', healthAfter.body.sessions, 1)
+    const saved = JSON.parse(readFileSync(join(homeDir, 'storages', 'dsh-token-chart', 'usage.json'), 'utf8'))
+    const savedIds = (saved.sessions ?? []).map((session) => session.id)
+    check('the saved store drops the expired session', savedIds.includes('sess-C'), false)
+    check('the saved store keeps the retained session', savedIds.includes('sess-A'), true)
+    check('the saved store records its retention window', saved.retentionDays, 30)
+  }
 
   const prefs = await call('/prefs')
   check('default session chart', prefs.body.value.sessionChart, 'multi-bar')
