@@ -54,6 +54,10 @@ export const zh = {
   'settings.update.unpublished': '未发布到 registry，无法自动更新',
   'settings.update.running': '正在更新…',
   'settings.update.done': '更新完成：{target}',
+  'settings.update.restart': '已安装 {target}，请重启 DSH 后生效',
+  'settings.update.cancelled': '更新已取消',
+  'settings.update.hmr':
+    '当前 profile 启用了 HMR，插件不能就地升级：请在「插件市场」中把本插件更新到 {target}，更新后重启 DSH。',
   'settings.update.failed': '更新失败：{error}',
   'settings.update.local': '本地安装，请在源码目录重建并重新加载',
   'settings.update.check': '检查更新',
@@ -135,6 +139,10 @@ export const en = {
   'settings.update.unpublished': 'Not published to a registry',
   'settings.update.running': 'Updating…',
   'settings.update.done': 'Updated: {target}',
+  'settings.update.restart': 'Installed {target}; restart DSH to activate it',
+  'settings.update.cancelled': 'Update cancelled',
+  'settings.update.hmr':
+    'This profile runs with HMR, so the plugin cannot upgrade itself: update it to {target} from the plugin market, then restart DSH.',
   'settings.update.failed': 'Update failed: {error}',
   'settings.update.local': 'Local install — rebuild and reload from the source directory',
   'settings.update.check': 'Check for updates',

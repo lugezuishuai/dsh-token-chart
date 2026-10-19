@@ -139,16 +139,28 @@ export interface VersionReport {
   updateAvailable: boolean
   checkedAt: number
   install: { kind: 'registry' | 'local' | 'unknown'; spec: string }
+  /** Whether the profile runs the Host HMR plugin, which refuses in-place installs. */
+  hmr: boolean
   run: UpdateRun
 }
 
-/** State of the one update attempt this Host may be running. */
+/**
+ * State of the one update attempt this Host may be running.
+ *
+ * `phase` is the outcome the settings row renders; `code` and `target` carry the
+ * plugin manager's structured result, so the row can explain *why* an attempt
+ * failed or needs a restart instead of claiming success.
+ */
 export interface UpdateRun {
-  phase: 'idle' | 'running' | 'done' | 'failed' | 'manual'
+  phase: 'idle' | 'running' | 'done' | 'restart' | 'failed' | 'cancelled' | 'manual'
   startedAt: number
   finishedAt: number
   message: string
   error: string
+  /** Version the finished attempt installed (or would have installed); empty while idle. */
+  target: string
+  /** Structured failure code, e.g. `already-installed` or `hmr-in-place`. */
+  code: string
 }
 
 /** Uniform success/failure envelope of every route. */
@@ -179,9 +191,18 @@ export interface SessionProjectionsLike {
   stateOf: (session: unknown, key: string) => { totals?: Record<string, number> } | undefined
 }
 
+/** The subset of a plugin-manager change result the update route reads. */
+export interface InstallResultLike {
+  /** `applied` / `restart-required` / `overridden` / `failed` / `cancelled`. */
+  application?: string
+  /** Manifest version of the installed package, when the manager reports it. */
+  version?: string
+  error?: { code?: string; diagnostic?: string }
+}
+
 /** `ctx.pluginManager` — the install path shared with `dsh plugin add`. */
 export interface PluginManagerLike {
-  installBundle: (spec: string, options?: Record<string, unknown>) => Promise<{ application?: string } | undefined>
+  installBundle: (spec: string, options?: Record<string, unknown>) => Promise<InstallResultLike | undefined>
 }
 
 /** Minimal HTTP request/response faces the routes need. */

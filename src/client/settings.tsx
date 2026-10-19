@@ -121,6 +121,8 @@ export function PluginHeader({ t }: { t: Translate }) {
     finishedAt: 0,
     message: '',
     error: '',
+    target: '',
+    code: '',
   })
   const [tick, setTick] = React.useState(0)
 
@@ -150,32 +152,52 @@ export function PluginHeader({ t }: { t: Translate }) {
 
   const version = state.value?.version
   const updateAvailable = state.value?.updateAvailable === true
+  /** HMR refuses in-place installs, so the row points at the marketplace instead. */
+  const hmr = state.value?.hmr === true
+  const updatable = updateAvailable && !hmr
   const status = state.value?.status
+  const target = run.target !== '' ? run.target : (state.value?.latest ?? '')
   const note =
     state.error !== ''
       ? state.error
       : run.phase === 'running'
         ? t('settings.update.running')
         : run.phase === 'done'
-          ? fill(t('settings.update.done'), { target: state.value?.latest ?? '' })
-          : run.phase === 'failed'
-            ? fill(t('settings.update.failed'), { error: run.error })
-            : run.phase === 'manual'
-              ? t('settings.update.local')
-              : state.loading
-                ? t('settings.update.checking')
-                : updateAvailable
-                  ? ''
-                  : status === 'unpublished'
-                    ? t('settings.update.unpublished')
-                    : status === 'ok'
-                      ? t('settings.update.upToDate')
-                      : ''
+          ? fill(t('settings.update.done'), { target })
+          : run.phase === 'restart'
+            ? fill(t('settings.update.restart'), { target })
+            : run.phase === 'cancelled'
+              ? t('settings.update.cancelled')
+              : run.phase === 'failed'
+                ? run.code === 'already-installed' || run.code === 'hmr-in-place'
+                  ? fill(t('settings.update.hmr'), { target })
+                  : fill(t('settings.update.failed'), { error: run.error || run.code || 'unknown' })
+                : run.phase === 'manual'
+                  ? t('settings.update.local')
+                  : state.loading
+                    ? t('settings.update.checking')
+                    : updateAvailable
+                      ? hmr
+                        ? fill(t('settings.update.hmr'), { target: state.value?.latest ?? '' })
+                        : ''
+                      : status === 'unpublished'
+                        ? t('settings.update.unpublished')
+                        : status === 'ok'
+                          ? t('settings.update.upToDate')
+                          : ''
 
   const trigger = async () => {
     try {
       await apiPost('/update', {})
-      setRun({ phase: 'running', startedAt: Date.now(), finishedAt: 0, message: '', error: '' })
+      setRun({
+        phase: 'running',
+        startedAt: Date.now(),
+        finishedAt: 0,
+        message: '',
+        error: '',
+        target: state.value?.latest ?? '',
+        code: '',
+      })
     } catch (failure) {
       setRun({
         phase: 'failed',
@@ -183,6 +205,8 @@ export function PluginHeader({ t }: { t: Translate }) {
         finishedAt: Date.now(),
         message: '',
         error: String((failure as Error)?.message ?? failure),
+        target: state.value?.latest ?? '',
+        code: '',
       })
     } finally {
       setTick((value) => value + 1)
@@ -201,7 +225,7 @@ export function PluginHeader({ t }: { t: Translate }) {
           <span className="dtc-plugin-version" data-dtc-version={version ?? ''}>
             {version === undefined ? t('settings.update.checking') : `v${version}`}
           </span>
-          {updateAvailable ? (
+          {updatable ? (
             <button
               type="button"
               className="dtc-update-button"

@@ -51,7 +51,15 @@ function request(routes, path, { method = 'GET', body, search = '', raw = false,
   })
 }
 
-async function mount(homeDir) {
+/**
+ * Mount the plugin on an isolated fake context and an isolated DSH_HOME.
+ *
+ * Every mount gets its own store directory: the fold is idempotent now, and the
+ * isolation is what lets the same log be folded twice and compared.
+ * @param homeDir - the DSH_HOME this mount reads and writes.
+ * @param options - optional services: `pluginManager` and `hmr`.
+ */
+async function mount(homeDir, options = {}) {
   process.env.DSH_HOME = homeDir
   const routes = []
   const listeners = new Map()
@@ -59,6 +67,8 @@ async function mount(homeDir) {
     sessionQuery: undefined,
     sessions: undefined,
     sessionProjections: undefined,
+    pluginManager: options.pluginManager,
+    hmr: options.hmr === true ? {} : undefined,
     webServer: {
       register(route) {
         routes.push(route)
@@ -251,9 +261,17 @@ it('folds usage, persists it and serves the API', async () => {
   check('30d buckets', thirtyDays.body.value.buckets.length, 30)
   check('30d reports the retention window', thirtyDays.body.value.retentionDays, 30)
   // Session C is 45 days old, so the widest window equals the 3-day total.
-  check('30d excludes turns past the retention window', thirtyDays.body.value.totals.total, threeDays.body.value.totals.total)
+  check(
+    '30d excludes turns past the retention window',
+    thirtyDays.body.value.totals.total,
+    threeDays.body.value.totals.total,
+  )
   check('30d ignores the expired session', thirtyDays.body.value.totals.sessions, 1)
-  check('an unknown range falls back to today', (await call('/overview', { search: '?range=nonsense' })).body.value.days, 1)
+  check(
+    'an unknown range falls back to today',
+    (await call('/overview', { search: '?range=nonsense' })).body.value.days,
+    1,
+  )
 
   /* --------------------- 保留期：超出窗口的数据滚动丢弃 --------------------- */
   {
@@ -499,6 +517,73 @@ it('folds usage, persists it and serves the API', async () => {
 
   const updateRoute = await call('/update', { method: 'POST' })
   check('POST /update refuses when nothing newer exists', updateRoute.body.error?.code, 'up-to-date')
+
+  /* ------------------------------------ 更新结果三态与 HMR 升级提示 --- */
+
+  {
+    // The plugin manager reports the *application* outcome separately from the
+    // install; the row must render that outcome instead of calling everything a
+    // success, and an HMR profile must be told about the marketplace.
+    const realFetch = globalThis.fetch
+    const previousProfile = process.env.DSH_PROFILE_DIR
+    const profileDir = await mkdtemp(join(tmpdir(), 'dtc-update-profile-'))
+    await writeFile(
+      join(profileDir, 'package.json'),
+      JSON.stringify({ name: 'probe-profile', private: true, dependencies: { 'dsh-token-chart': '^0.0.1' } }),
+    )
+    process.env.DSH_PROFILE_DIR = profileDir
+    globalThis.fetch = async (input, init) => {
+      const url = String(input)
+      if (url.includes('dsh-token-chart') && !url.includes('/token-chart/api')) {
+        return new Response(JSON.stringify({ 'dist-tags': { latest: '9.9.9' } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      return realFetch(input, init)
+    }
+    const scenario = async (result, options = {}) => {
+      const installs = []
+      const instance = await mount(await mkdtemp(join(tmpdir(), 'dtc-update-home-')), {
+        hmr: options.hmr === true,
+        pluginManager: {
+          installBundle: async (spec) => {
+            installs.push(spec)
+            return result
+          },
+        },
+      })
+      await instance.call('/version')
+      const posted = await instance.call('/update', { method: 'POST' })
+      await new Promise((resolve) => setTimeout(resolve, 120))
+      const report = await instance.call('/version')
+      return { posted, report: report.body.value, installs }
+    }
+
+    const failed = await scenario({ application: 'failed', error: { code: 'already-installed' } })
+    check('update failure reports phase "failed"', failed.report.run.phase, 'failed')
+    check('update failure keeps the manager code', failed.report.run.code, 'already-installed')
+    check('update failure never claims the new version applied', failed.report.run.message, 'application: failed')
+
+    const restart = await scenario({ application: 'restart-required', version: '9.9.9' })
+    check('restart-required reports phase "restart"', restart.report.run.phase, 'restart')
+    check('restart-required names the installed version', restart.report.run.target, '9.9.9')
+
+    const applied = await scenario({ application: 'applied', version: '9.9.9' })
+    check('applied install reports phase "done"', applied.report.run.phase, 'done')
+
+    const cancelled = await scenario({ application: 'cancelled' })
+    check('cancelled install reports phase "cancelled"', cancelled.report.run.phase, 'cancelled')
+
+    const hmrReport = await scenario({ application: 'applied', version: '9.9.9' }, { hmr: true })
+    check('GET /version reports the HMR flag', hmrReport.report?.hmr, true)
+    check('POST /update refuses an HMR profile', hmrReport.posted.body.error?.code, 'hmr-in-place')
+    check('an HMR profile never runs the installer', hmrReport.installs.length, 0)
+
+    globalThis.fetch = realFetch
+    if (previousProfile === undefined) delete process.env.DSH_PROFILE_DIR
+    else process.env.DSH_PROFILE_DIR = previousProfile
+  }
 
   // Live registry lookup (soft): proves the comparison path reads a real registry.
   const latest = await fetchLatestVersion('dshmarket', 'https://registry.npmmirror.com/').catch((error) => {

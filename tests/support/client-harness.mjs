@@ -707,6 +707,103 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
     apiOverrides.delete('/token-chart/api/version')
   }
 
+  /* --------- 更新结果：HMR profile 与「重启生效」提示 ------------------- */
+  {
+    const versionPayload = (overrides) => ({
+      ok: true,
+      value: {
+        name: 'dsh-token-chart',
+        version: '0.3.0',
+        registry: 'https://registry.npmmirror.com/',
+        status: 'ok',
+        latest: '0.4.0',
+        updateAvailable: true,
+        checkedAt: Date.now(),
+        install: { kind: 'registry', spec: '^0.3.0' },
+        hmr: false,
+        run: { phase: 'idle', startedAt: 0, finishedAt: 0, message: '', error: '', target: '', code: '' },
+        ...overrides,
+      },
+    })
+    const noteOf = () => container.querySelector('[data-dtc-update-note]')?.textContent ?? ''
+    // React reuses a fibre for the same component type, so mount another
+    // component first: the identity row only fetches /version on a fresh mount.
+    const showSettings = async () => {
+      await mount(panel, { t })
+      return mount(settings, { t })
+    }
+
+    apiOverrides.set('/token-chart/api/version', versionPayload({ hmr: true }))
+    await showSettings()
+    check(
+      'HMR profile hides the in-place update button',
+      container.querySelector('[data-dtc-update="available"]') === null,
+    )
+    check(
+      'HMR profile points the reader at the plugin market',
+      noteOf().includes('插件市场') && noteOf().includes('0.4.0'),
+      noteOf(),
+    )
+
+    apiOverrides.set(
+      '/token-chart/api/version',
+      versionPayload({
+        run: {
+          phase: 'failed',
+          startedAt: 1,
+          finishedAt: 2,
+          message: 'application: failed',
+          error: '',
+          target: '0.4.0',
+          code: 'already-installed',
+        },
+      }),
+    )
+    await showSettings()
+    check('a refused in-place update is not called a success', noteOf().includes('更新完成') === false, noteOf())
+    check('a refused in-place update still explains the HMR rule', noteOf().includes('插件市场'), noteOf())
+
+    apiOverrides.set(
+      '/token-chart/api/version',
+      versionPayload({
+        run: {
+          phase: 'restart',
+          startedAt: 1,
+          finishedAt: 2,
+          message: 'application: restart-required',
+          error: '',
+          target: '0.4.0',
+          code: '',
+        },
+      }),
+    )
+    await showSettings()
+    check('restart-required tells the reader to restart DSH', noteOf().includes('重启 DSH'), noteOf())
+
+    apiOverrides.set(
+      '/token-chart/api/version',
+      versionPayload({
+        run: {
+          phase: 'done',
+          startedAt: 1,
+          finishedAt: 2,
+          message: 'application: applied',
+          error: '',
+          target: '0.4.0',
+          code: '',
+        },
+      }),
+    )
+    await showSettings()
+    check(
+      'an applied install reports the installed version',
+      noteOf().includes('更新完成') && noteOf().includes('0.4.0'),
+      noteOf(),
+    )
+
+    apiOverrides.delete('/token-chart/api/version')
+  }
+
   /* --------- 命中率折线：开关必须对每种柱状/折线/组合图都生效 ---------- */
   {
     const seriesOf = () => container.querySelector('[data-dtc-chart]')?.getAttribute('data-dtc-series') ?? ''

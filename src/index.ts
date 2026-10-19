@@ -94,6 +94,14 @@ export function apply(ctx: HostContext): void {
   } = { query: undefined, sessions: undefined, projections: undefined }
   /** Plugin-manager face, present only when the profile ships that plugin. */
   let manager: PluginManagerLike | undefined
+  /**
+   * Whether the Host HMR plugin runs this profile.
+   *
+   * HMR refuses an in-place install of an already-installed bundle with
+   * `already-installed`, so this plugin can only *hint* at the marketplace
+   * update instead of attempting one it knows will be refused.
+   */
+  let hmrMounted = false
 
   const log = (...args: unknown[]): void => {
     try {
@@ -224,6 +232,17 @@ export function apply(ctx: HostContext): void {
     manager = injected.pluginManager
     return () => {
       manager = undefined
+    }
+  })
+
+  // HMR decides whether an in-place install is possible at all: its manager
+  // refuses to touch an already-installed bundle, so the settings row must send
+  // the reader to the marketplace instead of pretending the update ran.
+  ctx.inject(['hmr'], (injected) => {
+    if (injected.hmr === undefined) return undefined
+    hmrMounted = true
+    return () => {
+      hmrMounted = false
     }
   })
 
@@ -424,16 +443,28 @@ export function apply(ctx: HostContext): void {
     status: VersionReport['status']
     registry: string
   } = { at: 0, latest: undefined, status: 'unknown', registry: '' }
-  const updateRun: UpdateRun = { phase: 'idle', startedAt: 0, finishedAt: 0, message: '', error: '' }
+  const updateRun: UpdateRun = {
+    phase: 'idle',
+    startedAt: 0,
+    finishedAt: 0,
+    message: '',
+    error: '',
+    target: '',
+    code: '',
+  }
   let manifest = { name, version: '0.0.0' }
 
-  void (async () => {
+  /** Re-read the manifest so a finished install is reported at its real version. */
+  async function rereadManifest(): Promise<void> {
     try {
       manifest = await readOwnManifest()
     } catch (error) {
       warn('dsh-token-chart: could not read own manifest (%s)', String(error))
     }
-  })()
+    updateCheck.at = 0
+  }
+
+  void rereadManifest()
 
   /**
    * Profile directories worth probing, nearest first.
@@ -524,6 +555,7 @@ export function apply(ctx: HostContext): void {
       updateAvailable: latest !== undefined && compareVersions(manifest.version, latest) < 0,
       checkedAt: updateCheck.at,
       install: installKind(),
+      hmr: hmrMounted,
       run: updateRun,
     }
   }
@@ -577,8 +609,18 @@ export function apply(ctx: HostContext): void {
       if (!report.updateAvailable) {
         return { ok: false, error: { code: 'up-to-date', message: `${report.name} is already at ${report.version}` } }
       }
+      const resetRun = (): void => {
+        updateRun.startedAt = Date.now()
+        updateRun.finishedAt = 0
+        updateRun.message = ''
+        updateRun.error = ''
+        updateRun.target = report.latest ?? ''
+        updateRun.code = ''
+      }
       if (report.install.kind !== 'registry') {
+        resetRun()
         updateRun.phase = 'manual'
+        updateRun.target = report.install.spec || ''
         updateRun.message = `installed from ${report.install.spec || 'a local path'}; update it where it is developed`
         return {
           ok: false,
@@ -586,6 +628,23 @@ export function apply(ctx: HostContext): void {
             code: 'local-install',
             message: updateRun.message,
             command: `dsh plugin --profile ${process.env.DSH_PROFILE ?? '<profile>'} add ${report.name}@${report.latest}`,
+          },
+        }
+      }
+      if (hmrMounted) {
+        // HMR refuses to install over an already-installed bundle, so this
+        // plugin cannot upgrade itself here. Report the refusal instead of
+        // running an attempt that is guaranteed to fail.
+        resetRun()
+        updateRun.phase = 'failed'
+        updateRun.finishedAt = Date.now()
+        updateRun.code = 'hmr-in-place'
+        updateRun.message = 'this profile runs with HMR; update the plugin from the market'
+        return {
+          ok: false,
+          error: {
+            code: 'hmr-in-place',
+            message: `${report.name} cannot be upgraded in place while the profile runs HMR; update it to ${report.latest} from the plugin market`,
           },
         }
       }
@@ -598,24 +657,38 @@ export function apply(ctx: HostContext): void {
       if (updateRun.phase === 'running') {
         return { ok: false, error: { code: 'already-running', message: 'an update is already running' } }
       }
+      resetRun()
       updateRun.phase = 'running'
-      updateRun.startedAt = Date.now()
-      updateRun.finishedAt = 0
       updateRun.message = `installing ${report.name}@${report.latest}`
-      updateRun.error = ''
       void Promise.resolve()
         .then(() => manager?.installBundle(`${report.name}@${report.latest}`))
-        .then((result) => {
-          updateRun.phase = 'done'
+        .then(async (result) => {
+          const application = String(result?.application ?? 'applied')
           updateRun.finishedAt = Date.now()
-          updateRun.message = `application: ${String(result?.application ?? 'unknown')}`
-          updateCheck.at = 0
+          updateRun.target =
+            typeof result?.version === 'string' && result.version !== '' ? result.version : (report.latest ?? '')
+          updateRun.code = String(result?.error?.code ?? '')
+          updateRun.message = `application: ${application}`
+          if (application === 'failed') {
+            updateRun.phase = 'failed'
+            updateRun.error = String(result?.error?.diagnostic ?? result?.error?.code ?? 'application: failed')
+          } else if (application === 'cancelled') {
+            updateRun.phase = 'cancelled'
+          } else if (application === 'restart-required') {
+            updateRun.phase = 'restart'
+          } else {
+            // `applied`, `overridden` and any future success status.
+            updateRun.phase = 'done'
+          }
+          // The files may have changed even when activation needs a restart.
+          await rereadManifest()
         })
         .catch((error) => {
           updateRun.phase = 'failed'
           updateRun.finishedAt = Date.now()
           updateRun.error = String(error?.message ?? error)
           updateRun.message = 'update failed'
+          void rereadManifest()
         })
       return { ok: true, value: { started: true, target: `${report.name}@${report.latest}` } }
     },
