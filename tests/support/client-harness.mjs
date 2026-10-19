@@ -218,6 +218,14 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
   const dictionaries = {}
   const tabTypes = []
   const openedTabs = []
+  const openedSessions = []
+  let sessionListSnapshot = { ids: [], byId: {}, phase: 'pending', projectionsBySession: {} }
+  const sessionListListeners = new Set()
+  /** Publish a fake `ctx.sessions.list` snapshot, as a live list update would. */
+  const publishSessionList = (byId) => {
+    sessionListSnapshot = { ids: Object.keys(byId), byId, phase: 'ready', projectionsBySession: {} }
+    for (const listener of [...sessionListListeners]) listener()
+  }
   const services = {
     sidebarRightTabs: {
       register: (definition) => {
@@ -229,6 +237,20 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
       mounted: { getSnapshot: () => SESSION_ID },
       openTab: (kind, options) => {
         openedTabs.push({ kind, options })
+      },
+    },
+    sessions: {
+      list: {
+        getSnapshot: () => sessionListSnapshot,
+        subscribe: (listener) => {
+          sessionListListeners.add(listener)
+          return () => sessionListListeners.delete(listener)
+        },
+      },
+    },
+    uiWorkspace: {
+      openSession: (sessionId) => {
+        openedSessions.push(sessionId)
       },
     },
   }
@@ -380,6 +402,29 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
   // Warm the host's version cache: the first /version call queries the registry.
   await fetch(`${ORIGIN}/token-chart/api/version`).catch(() => {})
 
+  // The usage table names its sessions through the shell catalog. The fake
+  // catalog carries the live session ids, so the rendered label is a real title
+  // and the click assertion can name the exact session it expects.
+  const todayReport = await fetch(`${ORIGIN}/token-chart/api/overview?range=today`)
+    .then((response) => response.json())
+    .then((payload) => payload.value)
+    .catch(() => undefined)
+  const todaySessions = [
+    ...new Set(
+      (todayReport?.points ?? [])
+        .map((point) => point.sessionId)
+        .filter((sessionId) => typeof sessionId === 'string' && sessionId !== ''),
+    ),
+  ]
+  const sessionTitle = (index) => `会话名称测试 ${index} ${'很长的会话标题'.repeat(6)}`
+  const titledCatalog = Object.fromEntries(
+    todaySessions.map((sessionId, index) => [
+      sessionId,
+      { id: sessionId, title: sessionTitle(index), displayTitle: sessionTitle(index) },
+    ]),
+  )
+  publishSessionList(titledCatalog)
+
   const panel = seats('main')[0][1].component
   let html = await mount(panel, { t })
   check('panel renders its title', html.includes('Token 用量'))
@@ -394,6 +439,62 @@ export async function runClientSuite({ chunkFailure = false } = {}) {
   check('panel renders the data table', html.includes('<table') && html.includes('会话'))
   const panelNumbers = html.match(/>(\d[\d,]{3,})</g) ?? []
   check('panel shows real token counts', panelNumbers.length > 0, `${panelNumbers.length} numeric cells`)
+
+  /* ------------------------------------------- session name +「jump」 */
+
+  const firstSession = todaySessions[0]
+  const firstLink = container.querySelector('.dtc-session-link')
+  check(
+    'session cell renders the catalog title',
+    firstSession !== undefined &&
+      container.querySelectorAll('.dtc-session-link').length > 0 &&
+      html.includes(sessionTitle(0)),
+    firstSession ?? 'no session rows',
+  )
+  check('session cell no longer prints the clipped id', html.includes('>session-<') === false)
+  check(
+    'session cell carries the full title as a tooltip',
+    firstLink?.getAttribute('title') === (firstSession === undefined ? undefined : sessionTitle(0)),
+    String(firstLink?.getAttribute('title')),
+  )
+  check(
+    'session link has an accessible label',
+    (firstLink?.getAttribute('aria-label') ?? '').includes('打开会话'),
+    String(firstLink?.getAttribute('aria-label')),
+  )
+  check(
+    'long session names clip with an ellipsis',
+    /\.dtc-session-link[^}]*text-overflow:\s*ellipsis/s.test(
+      readFileSync(new URL('../../lib/token-chart.css', import.meta.url), 'utf8'),
+    ),
+  )
+  if (firstLink !== null) {
+    await act(async () => {
+      firstLink.click()
+    })
+  }
+  check(
+    'clicking a session cell opens that session',
+    firstSession !== undefined && openedSessions[0] === firstSession,
+    `${openedSessions[0] ?? 'no navigation'}`,
+  )
+  // A session the catalog no longer knows falls back to the id tail; it stays a
+  // link, and its tooltip still identifies it by the full id.
+  if (firstSession !== undefined) {
+    await act(async () => {
+      publishSessionList({})
+    })
+    await settle(60)
+    const fallback = container.querySelector('.dtc-session-link')
+    check(
+      'a session missing from the catalog falls back to its id tail',
+      (fallback?.textContent ?? '').startsWith('…') && fallback?.getAttribute('title') === firstSession,
+      `${fallback?.textContent} / ${fallback?.getAttribute('title')}`,
+    )
+    await act(async () => {
+      publishSessionList(titledCatalog)
+    })
+  }
 
   /* ------------------------------------ the chart chunk replaced the renderer */
 

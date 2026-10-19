@@ -78,6 +78,8 @@ export const zh = {
   'table.value': '数值',
   'table.share': '占比',
   'table.session': '会话',
+  'table.openSession': '打开会话：{session}',
+  'table.openSessionFailed': '无法打开该会话（可能已归档或已删除）',
   'usage.emptySession': '该会话还没有可统计的 Token 用量',
   'usage.accounting': '总量按计费口径累计：每次请求的上下文（含缓存重读）都计入，与 DSH 产品内「用量」一致',
   'usage.crossCheckFailed': '与产品内「用量」投影不一致（产品 {product}）——请反馈此差异',
@@ -157,6 +159,8 @@ export const en = {
   'table.value': 'Value',
   'table.share': 'Share',
   'table.session': 'Session',
+  'table.openSession': 'Open session: {session}',
+  'table.openSessionFailed': 'Could not open this session (it may be archived or deleted)',
   'usage.emptySession': 'This session has no token usage yet',
   'usage.accounting':
     'Totals follow the billing rule: every request re-reads the context (cache included) and counts — same as the product usage pill',

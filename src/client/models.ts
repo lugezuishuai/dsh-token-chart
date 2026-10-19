@@ -6,6 +6,8 @@
  *
  * @module dsh-token-chart/client/models
  */
+import type { ReactNode } from 'react'
+
 import type { Derived, MetricId } from '../types.ts'
 
 /** The locale binder the shell hands to every seat. */
@@ -47,7 +49,11 @@ export interface ColumnSpec {
   key: string
   label: string
   align?: 'right'
-  render?: (row: TableRow) => string
+  /**
+   * Cell renderer. Text is the common case; a cell may also be a rendered
+   * fragment (the session link is a button, not a string).
+   */
+  render?: (row: TableRow) => ReactNode
 }
 
 /** Totals as the KPI cards and the facts list show them. */

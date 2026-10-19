@@ -12,7 +12,7 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 | 用户可见入口 | 座位 | 内容 |
 | --- | --- | --- |
 | 会话标题栏「用量」按钮 / 消息底部「用量」胶囊 | `conversation.session.header.utilities` | 右侧边栏抽屉：文字统计 + 逐轮趋势图 |
-| 左侧边栏「Token 用量」 | `sidebar.panellist` + `main` | 今天 / 近 3 天 / 近 7 天 / 近 30 天：KPI + 趋势图 + 分页表格 |
+| 左侧边栏「Token 用量」 | `sidebar.panellist` + `main` | 今天 / 近 3 天 / 近 7 天 / 近 30 天：KPI + 趋势图 + 分页表格；「今天」表格的会话列显示会话名称，点击打开该会话 |
 | 设置 →「Token 用量」 | `settings.section` | 图表形式、指标与开关；插件版本与更新按钮 |
 
 - **零运行时依赖**：宿主半边不 import 任何 `@deepseek-ai/*`；浏览器半边的 external 只有 react 平台种子。安装不需要 peer 解析。
@@ -107,7 +107,8 @@ DeepSeek Harness（DSH）插件：采集本机会话的 provider 上报用量，
 - `index.tsx`：注册座位（`settings.section` / `sidebar.panellist` / `main` / `conversation.session.header.utilities` / `sidebar.right.pane.tab(.title)`）、拦截产品自己的用量胶囊、注册 zh·en 字典、装样式、预热偏好。
 - `mount.tsx`：ECharts 挂载——`require.async('./client.echarts.js')`、读 `--dsw-alias-*` 主题 token、组装 option、每容器一个实例。
 - `charts.tsx`：**降级路径**。chunk 拉不到时用内置自绘 SVG，UI 必须仍然可用（`tests/client-degraded.test.mjs` 守这条）。
-- `series.tsx` `table.tsx` `ui.tsx` `drawer.tsx` `panel.tsx` `settings.tsx` `chrome.tsx` `api.ts` `contract.ts` `models.ts` `format.ts` `locales.ts` `pill.ts` `react.ts`：按职责拆的扁平模块。
+- `series.tsx` `table.tsx` `ui.tsx` `drawer.tsx` `panel.tsx` `settings.tsx` `chrome.tsx` `sessions.tsx` `api.ts` `contract.ts` `models.ts` `format.ts` `locales.ts` `pill.ts` `react.ts`：按职责拆的扁平模块。
+- `sessions.tsx`：会话名称与「打开会话」——可选捕获 `ctx.sessions`（标题目录）与 `ctx.uiWorkspace`（`openSession`）；会话列是链接按钮，长名称由样式裁成省略号、完整名称在 `title` tooltip 里；两个服务任一缺失时降级（纯文本 / 短 id）。
 
 ### 5.4 DSH 侧契约（改这里要连带改）
 
@@ -171,7 +172,7 @@ dsh-token-chart/
 ├── src/                       源码（唯一事实来源）
 │   ├── index.ts store.ts buckets.ts prefs.ts paths.ts constants.ts types.ts update.ts
 │   ├── chunk/                 echarts.entry.ts —— chunk 的构建入口
-│   └── client/                浏览器半边（18 个 TS/TSX）
+│   └── client/                浏览器半边（19 个 TS/TSX）
 │       └── styles/            index.less / components.less / tokens.less / tailwind.css
 ├── lib/                       全部产物（git 忽略，npm run build 生成）
 ├── scripts/                   build-client / build-chunk / build-styles / client-contract / preflight
@@ -197,6 +198,7 @@ dsh-token-chart/
 | --- | --- |
 | 新增图表形式 | `src/constants.ts#CHART_IDS` → `src/client/contract.ts` → `series.tsx` / `charts.tsx` / `mount.tsx` → `settings.tsx` → `locales.ts`（zh+en） |
 | 新增指标 | `src/constants.ts#METRIC_IDS` → `buckets.ts#derived` → `src/types.ts` → `client/format.ts` + `locales.ts` |
+| 会话列的名称与跳转 | `src/client/sessions.tsx`（`ctx.sessions` 标题 + `ctx.uiWorkspace.openSession`）→ `panel.tsx` 列定义 → `locales.ts`（zh+en）→ `styles/components.less` → `tests/support/client-harness.mjs`（标题 / tooltip / 点击） |
 | 新增座位 | `src/client/index.tsx` + `package.json#dsh.client.inject` |
 | 新增 API | `src/index.ts` 的 `routes` 表 + README 的 API 表 + `tests/host.test.mjs` |
 | 改保留期 / 新增区间 | `src/constants.ts`（`RETENTION_DAYS`、`RANGE_DAYS`）→ `src/client/panel.tsx` 分段控件 + `locales.ts`（zh+en）→ `tests/host.test.mjs`（窗口与滚动丢弃）+ `tests/support/client-harness.mjs`（点按钮、分页页数）→ README/AGENTS 的区间与保留期描述 |

@@ -14,6 +14,7 @@ import { React } from './react.ts'
 
 import { usePrefs } from './api.ts'
 import { clockText, exactTokens, percentText } from './format.ts'
+import { SessionLink } from './sessions.tsx'
 import { ChartBlock } from './series.tsx'
 import { KpiRow, Segmented } from './ui.tsx'
 
@@ -21,6 +22,7 @@ export function DailyUsagePanel({ t }: { t: Translate }) {
   const prefs = usePrefs()
   const [range, setRange] = React.useState('today')
   const [tick, setTick] = React.useState(0)
+  const [actionError, setActionError] = React.useState<string>()
   const endpoint = useEndpoint(`/overview?range=${range}`, tick)
   const report = endpoint.value as OverviewReport | undefined
   const totals = report?.totals
@@ -57,7 +59,17 @@ export function DailyUsagePanel({ t }: { t: Translate }) {
     range === 'today'
       ? [
           { key: 'time', label: t('table.time'), render: (row) => clockText(row.time) },
-          { key: 'session', label: t('table.session'), render: (row) => String(row.sessionId ?? '').slice(0, 8) },
+          {
+            key: 'session',
+            label: t('table.session'),
+            render: (row) => (
+              <SessionLink
+                sessionId={String(row.sessionId ?? '')}
+                t={t}
+                onError={() => setActionError(t('table.openSessionFailed'))}
+              />
+            ),
+          },
           { key: 'turn', label: t('table.turn') },
           { key: 'total', label: t('metric.total'), align: 'right', render: (row) => exactTokens(row.total) },
           { key: 'input', label: t('metric.input'), align: 'right', render: (row) => exactTokens(row.input) },
@@ -108,7 +120,10 @@ export function DailyUsagePanel({ t }: { t: Translate }) {
       <div className="dtc-filters">
         <Segmented
           value={range}
-          onChange={setRange}
+          onChange={(next) => {
+            setActionError(undefined)
+            setRange(next)
+          }}
           options={[
             { value: 'today', label: t('panel.range.today') },
             { value: '3d', label: t('panel.range.3d') },
@@ -126,6 +141,7 @@ export function DailyUsagePanel({ t }: { t: Translate }) {
         <p className="dtc-error">{endpoint.error}</p>
       ) : (
         <React.Fragment>
+          {actionError === undefined ? null : <p className="dtc-error">{actionError}</p>}
           <div className="dtc-banner">
             <span className="dtc-banner-label">{t('metric.total')}</span>
             <span className="dtc-banner-value">{exactTokens(totals?.total)}</span>

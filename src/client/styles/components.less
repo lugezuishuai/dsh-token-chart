@@ -54,6 +54,12 @@
 .dtc-table th { color: @label-secondary; font-weight: 500; background: @bg-layer-1; position: sticky; top: 0; }
 .dtc-table tbody tr:last-child td { border-bottom: 0; }
 .dtc-right { text-align: right !important; font-variant-numeric: tabular-nums; }
+/* The session cell clips one line; the full name rides in the button's tooltip. */
+.dtc-session-name, .dtc-session-link { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; text-align: left; }
+.dtc-session-link { border: 0; background: none; margin: 0; padding: 0; font: inherit; color: @brand; cursor: pointer; }
+.dtc-session-link:hover { text-decoration: underline; }
+.dtc-session-link:focus-visible { outline: 2px solid @brand; outline-offset: 2px; border-radius: 3px; }
+.dtc-session-name { color: @label-primary; }
 .dtc-empty { color: @label-secondary; font-size: 12px; padding: 18px 2px; }
 .dtc-error { color: @state-error; font-size: 12px; }
 .dtc-warn { color: @state-warn; font-size: 11px; margin: 6px 0 0; }

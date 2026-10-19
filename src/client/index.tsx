@@ -19,6 +19,7 @@ import { HeaderUsageButton, installStyles, PanelIcon, registerSettingsNavIcon } 
 import { isUsagePill } from './pill.ts'
 import { en, zh } from './locales.ts'
 import { DailyUsagePanel } from './panel.tsx'
+import { attachSessions, attachWorkspace } from './sessions.tsx'
 import { SessionUsageBody } from './drawer.tsx'
 import { TokenChartSettings } from './settings.tsx'
 import type { ClientContext } from './contract.ts'
@@ -73,6 +74,11 @@ export function apply(ctx: ClientContext): void {
       live = false
     }
   }, 'dsh-token-chart: preferences')
+
+  /* ---- session names +「jump to the session」 ----------------- */
+
+  ctx.inject(['sessions'], (injected: Record<string, any>) => attachSessions(injected.get('sessions')))
+  ctx.inject(['uiWorkspace'], (injected: Record<string, any>) => attachWorkspace(injected.get('uiWorkspace')))
 
   /* ---- settings page ------------------------------------------- */
 
